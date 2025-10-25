@@ -11,7 +11,7 @@ const LeftSideBar = () => {
   const menuItems = getMenuItems()
   return (
     <div className="startbar d-print-none">
-      <div className="brand">
+      <div className="brand flex-column justify-content-center text-center">
         <LogoBox />
       </div>
       <div className="startbar-menu">
@@ -20,14 +20,7 @@ const LeftSideBar = () => {
             <Suspense fallback={<FallbackLoading />}>
               <AppMenu menuItems={menuItems} />
             </Suspense>
-            <div className="update-msg text-center">
-              <div className="d-flex justify-content-center align-items-center thumb-lg update-icon-box  rounded-circle mx-auto">
-                <Image src={partyImg} alt='partyImg' className="d-inline-block me-1" height={30} />
-              </div>
-              <h5 className="mt-3">Mannat Themes</h5>
-              <p className="mb-3 text-muted">Dastone is a high quality web applications.</p>
-              <a href="javascript: void(0);" className="btn bg-black text-white shadow-sm rounded-pill">Upgrade your plan</a>
-            </div>
+            
           </div>
         </SimplebarReactClient>
       </div>
