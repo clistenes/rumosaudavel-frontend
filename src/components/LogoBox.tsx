@@ -12,8 +12,8 @@ const LogoBox = () => {
         <Image src={logoSm} width={24} height={24} alt="logo-small" className="logo-sm" />
       </span>
       <span >
-        <Image src={logoLight} alt="logo-large" className="logo-lg logo-light" />
-        <Image src={logoDark} alt="logo-large" className="logo-lg logo-dark" />
+        <Image src={logoLight} alt="logo-large" height={22} className="logo-lg logo-light" />
+        <Image src={logoDark} alt="logo-large" height={22} className="logo-lg logo-dark" />
       </span>
     </Link>
   )

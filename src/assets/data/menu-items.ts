@@ -6,7 +6,13 @@ export const MENU_ITEMS: MenuItemType[] = [
     label: 'Navigation',
     isTitle: true,
   },
-    {
+  {
+    key: 'inicio',
+    label: 'Início',
+    icon: 'iconoir:home-simple',
+    url: '/inicio',
+  },
+  {
     key: 'dashboards',
     icon: 'iconoir:report-columns',
     label: 'Dashboards',

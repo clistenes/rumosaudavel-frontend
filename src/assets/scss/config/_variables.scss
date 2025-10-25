@@ -19,7 +19,7 @@ $topbar-box-shadow:                    0 3px 4px rgba(142,134,171,.10);
 $startbar-width:                       230px;
 $startbar-collapsed-width:             70px;
 
-$startbar-bg:                          #f8f9fb;
+$startbar-bg:                          #ffffff;
 // $startbar-bg-navy-blue:                #0a2555;
 $startbar-e-border-color:              $gray-300;
 
@@ -333,7 +333,7 @@ $cyans: (
 // fusv-enable
 
 // scss-docs-start theme-color-variables
-$primary:       $purple;
+$primary:       $orange;
 $secondary:     $gray-500;
 $success:       $green;
 $info:          $teal;
@@ -500,7 +500,7 @@ $position-values: (
 
 $body-text-align:           null;
 $body-color:                #303e67;
-$body-bg:                   #ffffff;
+$body-bg:                   #f1f0f5;
 
 $body-secondary-color:      #96a0b5;
 $body-secondary-bg:         $white; // card-bg

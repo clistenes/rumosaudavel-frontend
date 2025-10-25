@@ -9,7 +9,7 @@ const PageTitle = ({ title, subName }: { title: string; subName?: string }) => {
         <div className="page-title-box d-md-flex justify-content-md-between align-items-center">
           <h4 className="page-title">{title}</h4>
             <Breadcrumb className="mb-0">
-              <BreadcrumbItem className='content-none'>Dastone</BreadcrumbItem>
+              <BreadcrumbItem className='content-none'>Rumo Saudável</BreadcrumbItem>
               <BreadcrumbItem className='content-none'><IconifyIcon icon='la:angle-double-right' /></BreadcrumbItem>
               {
                 subName &&

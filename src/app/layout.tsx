@@ -9,10 +9,10 @@ import { DEFAULT_PAGE_TITLE } from "@/context/constants";
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | Dastone NextJS - Admin & Dashboard Template',
+    template: '%s | Rumo Saudável',
     default: DEFAULT_PAGE_TITLE,
   },
-  description: 'Premium Multipurpose Admin & Dashboard Template',
+  description: 'Rumo Saudável',
 }
 
 export default function RootLayout({

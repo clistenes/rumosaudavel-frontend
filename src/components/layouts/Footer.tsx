@@ -11,10 +11,10 @@ const Footer = () => {
             <Card className="mb-0 border-bottom-0 rounded-bottom-0">
               <CardBody>
                 <p className="text-muted mb-0">
-                  © {currentYear}&nbsp;Dastone
-                  <span className="text-muted d-none d-sm-inline-block float-end">
+                  © {currentYear}&nbsp;Rumo Saudável.
+                  {/* <span className="text-muted d-none d-sm-inline-block float-end">
                     Design with&nbsp;
-                    <i className="iconoir-heart-solid text-danger align-middle" />&nbsp;by Mannatthemes</span>
+                    <i className="iconoir-heart-solid text-danger align-middle" />&nbsp;by Mannatthemes</span> */}
                 </p>
               </CardBody>
             </Card>
