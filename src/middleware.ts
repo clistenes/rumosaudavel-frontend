@@ -4,7 +4,7 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next()
 
   if (request.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard/analytics', request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
   return response
 }

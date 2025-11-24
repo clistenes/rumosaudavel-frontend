@@ -17,15 +17,15 @@ const useSignIn = () => {
   const queryParams = useQueryParams()
 
   const loginFormSchema = yup.object({
-    email: yup.string().email('Please enter a valid email').required('Please enter your email'),
-    password: yup.string().required('Please enter your password'),
+    login: yup.string().required('Por favor, insira seu login'),
+    password: yup.string().required('Por favor, insira sua senha'),
   })
 
   const { control, handleSubmit } = useForm({
     resolver: yupResolver(loginFormSchema),
     defaultValues: {
-      email: 'user@demo.com',
-      password: '123456',
+      login: 'Davi2022',
+      password: 'Rumo2023',
     },
   })
 
@@ -35,12 +35,12 @@ const useSignIn = () => {
     setLoading(true)
     signIn('credentials', {
       redirect: false,
-      email: values?.email,
+      login: values?.login,
       password: values?.password,
     }).then((res) => {
       if (res?.ok) {
-        push(queryParams['redirectTo'] ?? '/dashboard/analytics')
-        showNotification({ message: 'Successfully logged in. Redirecting....', variant: 'success' })
+        push(queryParams['redirectTo'] ?? '/inicio')
+        showNotification({ message: 'Login realizado com sucesso. Redirecionando....', variant: 'success' })
       } else {
         showNotification({ message: res?.error ?? '', variant: 'danger' })
       }

@@ -7,9 +7,9 @@ import { UserType } from '@/types/auth'
 export const fakeUsers: UserType[] = [
   {
     id: '1',
-    email: 'user@demo.com',
+    login: 'Davi2022',
     username: 'demo_user',
-    password: '123456',
+    password: 'Rumo2023',
     firstName: 'Demo',
     lastName: 'User',
     role: 'Admin',
@@ -23,8 +23,8 @@ export const options: NextAuthOptions = {
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        email: {
-          label: 'Email:',
+        login: {
+          label: 'Login:',
           type: 'text',
           placeholder: 'Enter your username',
         },
@@ -35,12 +35,12 @@ export const options: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         const filteredUser = fakeUsers.find((user) => {
-          return user.email === credentials?.email && user.password === credentials?.password
+          return user.login === credentials?.login && user.password === credentials?.password
         })
         if (filteredUser) {
           return filteredUser
         } else {
-          throw new Error('Email or Password is not valid')
+          throw new Error('Login inválido')
         }
       },
     }),

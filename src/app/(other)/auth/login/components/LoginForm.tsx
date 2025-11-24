@@ -11,22 +11,14 @@ const LoginForm = () => {
 
   return (
     <form onSubmit={login} className="my-4">
-      <TextFormInput control={control} name="email" label="Username" containerClassName="form-group mb-2" placeholder="Enter your username" />
+      <TextFormInput control={control} name="login" label="Login" containerClassName="form-group mb-2" placeholder="Digite seu login" />
 
-      <PasswordFormInput control={control} name="password" label="Password" containerClassName="form-group" placeholder="Enter your password" />
+      <PasswordFormInput control={control} name="password" label="Senha" containerClassName="form-group" placeholder="Digite sua senha" />
 
       <div className="form-group row mt-3">
-        <Col sm={6}>
-          <div className="form-check form-switch form-switch-primary">
-            <input className="form-check-input" type="checkbox" id="customSwitchSuccess" />
-            <label className="form-check-label" htmlFor="customSwitchSuccess">
-              Remember me
-            </label>
-          </div>
-        </Col>
-        <Col sm={6} className="text-end">
+        <Col sm={6} className="">
           <Link href="/auth/reset-pass" className="text-muted font-13">
-            {' '}
+            
             Forgot password?
           </Link>
         </Col>
@@ -35,7 +27,7 @@ const LoginForm = () => {
         <Col xs={12}>
           <div className="d-grid mt-3">
             <button className="btn btn-primary flex-centered" type="submit" disabled={loading}>
-              Log In <IconifyIcon icon="fa6-solid:right-to-bracket" className="ms-1" />
+              Entrar<IconifyIcon icon="fa6-solid:right-to-bracket" className="ms-1" />
             </button>
           </div>
         </Col>
