@@ -8,7 +8,7 @@ export const metadata = { title: 'Início' }
 const Home = () => {
   return (
     <>
-      <PageTitle title='Início' subName='Dashboard' />
+      <PageTitle title='Dashboard'  />
       <Row>
         <State />
       </Row>

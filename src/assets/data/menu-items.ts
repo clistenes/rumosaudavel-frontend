@@ -1,16 +1,129 @@
 import type { MenuItemType } from '@/types/menu'
 
 export const MENU_ITEMS: MenuItemType[] = [
+  // {
+  //   key: 'navigation',
+  //   label: 'Navigation',
+  //   isTitle: true,
+  // },
   {
-    key: 'navigation',
-    label: 'Navigation',
-    isTitle: true,
-  },
-  {
-    key: 'inicio',
-    label: 'Início',
+    key: 'dashboard',
+    label: 'Dashboard',
     icon: 'iconoir:home-simple',
     url: '/inicio',
+  },
+
+  {
+    key: 'questionarios',
+    label: 'Questionários',
+    icon: 'iconoir:paste-clipboard',
+    children: [
+      {
+        key: 'novo-questionario',
+        label: 'Novo Questionário',
+        url: '/questionarios/novo-questionario',
+        parentKey: 'questionarios',
+      },
+      {
+        key: 'todos-questionario',
+        label: 'Todos Questionários',
+        url: '/questionarios/todos-questionarios',
+        parentKey: 'questionarios',
+      },
+    ]
+  },
+    {
+    key: 'programas',
+    label: 'Programas',
+    icon: 'iconoir:suitcase',
+    children: [
+      {
+        key: 'novo-programa',
+        label: 'Novo Programa',
+        url: '/programas/novo-programa',
+        parentKey: 'programas',
+      },
+      {
+        key: 'todos-programas',
+        label: 'Todos Programas',
+        url: '/programas/todos-programas',
+        parentKey: 'programas',
+      },
+    ]
+  },
+     {
+    key: 'empresas',
+    label: 'Empresas',
+    icon: 'iconoir:building',
+    children: [
+      {
+        key: 'dados-empresa',
+        label: 'Dados das Empresas',
+        url: '/empresas/dados-empresas',
+        parentKey: 'empresas',
+      },
+      {
+        key: 'nova-empresa',
+        label: 'Nova Empresa',
+        url: '/empresas/nova-empresa',
+        parentKey: 'empresas',
+      },
+      {
+        key: 'novo-usuario-empresa',
+        label: 'Novo Usuário',
+        url: '/empresas/novo-usuario-empresa',
+        parentKey: 'empresas',
+      },
+      {
+        key: 'pesquisar-usuario',
+        label: 'Pesquisar Usuário',
+        url: '/empresas/pesquisar-usuario',
+        parentKey: 'empresas',
+      },
+      {
+        key: 'termo-consentimento',
+        label: 'Termo de Consentimento',
+        url: '/empresas/termo-consentimento',
+        parentKey: 'empresas',
+      },
+    ]
+  },
+       {
+    key: 'adm',
+    label: 'Administração',
+    icon: 'iconoir:building',
+    children: [
+      {
+        key: 'novo-acesso',
+        label: 'Novo Acesso',
+        url: '/adm/novo-acesso',
+        parentKey: 'adm',
+      },
+      {
+        key: 'lista-acessos',
+        label: 'Lista de Acessos',
+        url: '/adm/lista-acessos',
+        parentKey: 'adm',
+      },
+      {
+        key: 'logs',
+        label: 'Logs',
+        url: '/adm/logs',
+        parentKey: 'adm',
+      },
+      {
+        key: 'ajuda',
+        label: 'Ajuda',
+        url: '/adm/ajuda',
+        parentKey: 'adm',
+      },
+    ]
+  },
+  {
+    key: 'sair',
+    icon: 'la:power-off',
+    label: 'Sair',
+    url: '/auth/logout',
   },
   {
     key: 'dashboards',
