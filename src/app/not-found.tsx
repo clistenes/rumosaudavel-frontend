@@ -1,8 +1,6 @@
 import Image from 'next/image'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import Link from 'next/link'
-
-import errorImg from '@/assets/images/extra/error.svg'
 import logoSm from '@/assets/images/logo-sm.png'
 import { Card, CardBody, Col, Row } from 'react-bootstrap'
 
@@ -20,18 +18,17 @@ const NotFound = () => {
                       <Link href="/" className="logo logo-admin">
                         <Image src={logoSm} height={50} alt="logo" className="auth-logo" />
                       </Link>
-                      <h4 className="mt-3 mb-1 fw-semibold text-white fs-18">Oops! Sorry page does not found</h4>
-                      <p className="text-muted fw-medium mb-0">Back to dashboard of Dastone</p>
+                      <h4 className="mt-3 mb-1 fw-semibold text-white fs-18">Opa! Página não encontrada</h4>
+                      <p className="text-muted fw-medium mb-0">Voltar ao painel do Rumo Saudável</p>
                     </div>
                   </CardBody>
                   <CardBody>
                     <div className="ex-page-content text-center">
-                      <Image src={errorImg} alt={'error-img'} height={170} />
                       <h1 className="my-2">404!</h1>
-                      <h5 className="fs-16 text-muted mb-3">Something went wrong</h5>
+                      <h5 className="fs-16 text-muted mb-3">Algo deu errado</h5>
                     </div>
                     <Link href="/" className="btn btn-primary w-100">
-                      Back to Dashboard <IconifyIcon icon="fa-solid:redo" className="ms-1" />
+                      Voltar ao painel <IconifyIcon icon="fa-solid:redo" className="ms-1" />
                     </Link>
                   </CardBody>
                 </Card>
