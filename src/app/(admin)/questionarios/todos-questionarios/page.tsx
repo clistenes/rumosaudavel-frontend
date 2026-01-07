@@ -11,7 +11,7 @@ const TodosQuestionarios = () => {
      <>
       <PageTitle title='Todos Questionários' subName='Questionários'  />
       <Row>
-        <ComponentContainerCard title="Basic Example">
+        <ComponentContainerCard title="">
       <div className="table-responsive">
         <Table className="mb-0 table-centered">
           <thead className="table-light">

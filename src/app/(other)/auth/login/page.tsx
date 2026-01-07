@@ -12,12 +12,12 @@ const Login = () => {
   return (
     <Col lg={4} className="mx-auto">
       <Card>
-        <CardBody className="p-0 bg-black auth-header-box rounded-top">
+        <CardBody className="p-0 bg-gray-100 auth-header-box rounded-top">
           <div className="text-center p-4">
             <Link href="/" className="logo logo-admin">
               <Image src={logoDarkImg} height={50} alt="logo" className="auth-logo" />
             </Link>
-            <h4 className="mt-4 mb-1 fw-semibold text-white fs-18">Bem vindo ao Portal da Rumo!</h4>
+            <h4 className="mt-4 mb-1 fw-semibold  fs-18">Bem vindo ao Portal da Rumo!</h4>
           </div>
         </CardBody>
         <CardBody>

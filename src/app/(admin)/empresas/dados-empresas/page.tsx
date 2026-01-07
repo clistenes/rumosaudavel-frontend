@@ -33,7 +33,7 @@ const TodasEmpresas = () => {
             {empresasData.map((item, idx) => (
               <tr key={idx} className="text-center" style={{ borderLeft: `4px solid var(--bs-${item.color})` }}>
                 {/* bg-${item.color} bg-opacity-10*/}
-                <td>
+                <td className="d-flex flex-column align-items-center justify-content-center">
                   {item.nome}
                   <Image src={item.logo} alt={item.nome}  height={40} className="me-2" />
                 </td>
