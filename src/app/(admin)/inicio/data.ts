@@ -61,13 +61,7 @@ export const stateData: StateType[] = [
     variant: 'pink',
     icon: 'iconoir:okrs'
   },
-  {
-    type: "Manual de Uso",
-    value: "como usar?",
-    variant: 'blue',
-    
-    icon: 'iconoir:play'
-  }
+
 ]
 
 
