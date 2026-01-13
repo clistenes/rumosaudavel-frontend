@@ -7,6 +7,11 @@ export const MENU_ITEMS: MenuItemType[] = [
   //   isTitle: true,
   // },
   {
+    key: 'menu',
+    label: 'Menu',
+    url: '/testes',
+  },
+  {
     key: 'dashboard',
     label: 'Dashboard',
     icon: 'iconoir:home-simple',

@@ -14,6 +14,6 @@ export const buyLink = ''
 
 export const basePath = ''
 
-export const DEFAULT_PAGE_TITLE = 'Dastone Next | Admin & Dashboard Template'
+export const DEFAULT_PAGE_TITLE = 'Rumo Saudável'
 
 export const colorVariants = ['primary', 'secondary', 'success', 'warning', 'info', 'danger', 'dark', 'light']
