@@ -1,5 +1,5 @@
 import * as yup from "yup";
-import { FormData } from "./types";
+import { FormUser } from "./types";
 
 export const editUserSchema= yup.object({
   nome: yup

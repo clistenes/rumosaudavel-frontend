@@ -6,18 +6,15 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { editUserSchema } from "../../adm/Schemas";
 
 import { InferType } from "yup";
+import { FormUser, Usuario } from "../types";
 
 export type EditUserFormData = InferType<typeof editUserSchema>;
-
 
 interface EditUserModalProps {
   show: boolean;
   onClose: () => void;
   onSave: (data: EditUserFormData) => void;
-  user: {
-    nome: string;
-    login: string;
-  };
+  user: FormUser;
 }
 
 export default function EditUserModal({
@@ -66,11 +63,7 @@ export default function EditUserModal({
             <form onSubmit={handleSubmit(onSubmit)}>
               <div className="modal-header">
                 <h5 className="modal-title">Editar Usuário</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={onClose}
-                />
+                <button type="button" className="btn-close" onClick={onClose} />
               </div>
 
               <div className="modal-body">
@@ -78,19 +71,21 @@ export default function EditUserModal({
                   <label className="form-label">Nome</label>
                   <input
                     type="text"
-                    className={`form-control ${errors.nome ? "is-invalid" : ""}`}
+                    className={`form-control ${
+                      errors.nome ? "is-invalid" : ""
+                    }`}
                     {...register("nome")}
                   />
-                  <div className="invalid-feedback">
-                    {errors.nome?.message}
-                  </div>
+                  <div className="invalid-feedback">{errors.nome?.message}</div>
                 </div>
 
                 <div className="mb-3">
                   <label className="form-label">Login</label>
                   <input
                     type="text"
-                    className={`form-control ${errors.login ? "is-invalid" : ""}`}
+                    className={`form-control ${
+                      errors.login ? "is-invalid" : ""
+                    }`}
                     {...register("login")}
                   />
                   <div className="invalid-feedback">
@@ -102,7 +97,9 @@ export default function EditUserModal({
                   <label className="form-label">Nova Senha</label>
                   <input
                     type="password"
-                    className={`form-control ${errors.senha ? "is-invalid" : ""}`}
+                    className={`form-control ${
+                      errors.senha ? "is-invalid" : ""
+                    }`}
                     {...register("senha")}
                     placeholder="Deixe em branco para não alterar"
                   />

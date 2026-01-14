@@ -94,7 +94,11 @@
     border-color: var(--#{$prefix}border-secondary) !important;
 }
 // Background color
-
+.actions-column {
+  width: 80px;
+  white-space: nowrap;
+  text-align: center;
+}
 
 .bg-blue-subtle {
     background-color: var(--#{$prefix}blue-bg-subtle);
