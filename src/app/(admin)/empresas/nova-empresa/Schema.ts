@@ -1,13 +1,31 @@
-import * as yup from 'yup'
-import { EmpresaFormData } from './empresaFormData';
+import * as yup from "yup";
+import { EmpresaForm } from "./type";
 
-export const empresaSchema: yup.ObjectSchema<EmpresaFormData> = yup
-.object({
-  empresa: yup.string().required('O nome da empresa é obrigatório'),
-  introducao: yup.string().required('A introdução é obrigatória'),
-  cor: yup.string().required('A cor é obrigatória'),
-  termo: yup.boolean().required('Você deve aceitar os termos'),
-  logotipo: yup.mixed<FileList>().required('O logotipo é obrigatório'),
-  
-})
-.required();
+export const empresaSchema: yup.ObjectSchema<EmpresaForm> = yup.object({
+  nome: yup.string().required("Nome é obrigatório"),
+
+  descricao: yup.string().required("Descrição é obrigatória"),
+
+  cor: yup.string().required(),
+
+  consentimento: yup.boolean().required(),
+
+  camposPadrao: yup.object({
+    nome: yup.boolean().required(),
+    faixaEtaria: yup.boolean().required(),
+  }),
+
+  camposCustomizados: yup
+    .array()
+    .of(
+      yup.object({
+        label: yup.string().required(),
+        tipo: yup
+          .mixed<"objetiva" | "dissertativa">()
+          .oneOf(["objetiva", "dissertativa"])
+          .required(),
+        opcoes: yup.string().nullable().notRequired(),
+      })
+    )
+    .optional(),
+});

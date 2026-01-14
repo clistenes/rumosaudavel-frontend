@@ -85,6 +85,7 @@ export const MENU_ITEMS: MenuItemType[] = [
         url: '/empresas/pesquisar-usuario',
         parentKey: 'empresas',
       },
+      
       {
         key: 'termo-consentimento',
         label: 'Termo de Consentimento',
@@ -98,12 +99,12 @@ export const MENU_ITEMS: MenuItemType[] = [
     label: 'Administração',
     icon: 'iconoir:building',
     children: [
-      {
-        key: 'novo-acesso',
-        label: 'Novo Acesso',
-        url: '/adm/novo-acesso',
-        parentKey: 'adm',
-      },
+      // {
+      //   key: 'novo-acesso',
+      //   label: 'Novo Acesso',
+      //   url: '/adm/novo-acesso',
+      //   parentKey: 'adm',
+      // },
       {
         key: 'lista-acessos',
         label: 'Lista de Acessos',

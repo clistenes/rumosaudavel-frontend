@@ -7,6 +7,8 @@ import { Button, Form, FormControl, FormLabel, Row, Table } from 'react-bootstra
 import * as yup from 'yup'
 import { EmpresaFormData } from './empresaFormData'
 import EmpresaForm from './components/EmpresaForm'
+import CreateEmpresaForm from './components/EmpresaForm'
+import { CreateEmpresa } from './components/CreateEmpresa'
 
 
 export const metadata = { title: 'Todas as Empresas' }
@@ -18,9 +20,7 @@ const NovaEmpresa = () => {
         <>
         <PageTitle title='Nova Empresa' subName='Empresas'  />
         <Row>
-          <ComponentContainerCard title="">
-            <EmpresaForm />
-          </ComponentContainerCard>
+          <CreateEmpresa />
         </Row>
         </>
   )
