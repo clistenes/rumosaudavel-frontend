@@ -1,12 +1,30 @@
+'use client'
+
 import ComponentContainerCard from '@/components/ComponentContainerCard'
 import PageTitle from '@/components/PageTitle'
-import React from 'react'
+import React, { useState } from 'react'
 import { Row, Table } from 'react-bootstrap'
 import { questionariosData } from './data'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
+import type { QuestionarioType } from './type'
 
-export const metadata = { title: 'Todos Questionários' }
+// export const metadata = { title: 'Todos Questionários' }
 const TodosQuestionarios = () => {
+  const [questionarios, setQuestionarios] = useState<QuestionarioType[]>(questionariosData)
+
+  const handleDuplicate = (id: number) => {
+    const questionarioToDuplicate = questionarios.find((q) => q.id === id)
+    if (questionarioToDuplicate) {
+      const newQuestionario: QuestionarioType = {
+        ...questionarioToDuplicate,
+        id: Math.max(...questionarios.map((q) => q.id)) + 1,
+        titulo: `${questionarioToDuplicate.titulo} (Cópia)`,
+        criacao: new Date().toLocaleString('pt-BR'),
+      }
+      setQuestionarios([...questionarios, newQuestionario])
+    }
+  }
+
   return (
      <>
       <PageTitle title='Todos Questionários' subName='Questionários'  />
@@ -24,7 +42,7 @@ const TodosQuestionarios = () => {
             </tr>
           </thead>
           <tbody>
-            {questionariosData.map((item, idx) => (
+            {questionarios.map((item, idx) => (
               <tr key={idx}>
                 <td>
 
@@ -34,11 +52,11 @@ const TodosQuestionarios = () => {
                 <td>
                   {item.qtd_perguntas}
                 </td>
-         
+
                 <td className="">
                     <IconifyIcon icon="iconoir:doc-magnifying-glass-in" className="fs-18 m-1 align-text-bottom text-primary" />
                     <IconifyIcon icon="iconoir:menu-scale" className="fs-18 m-1 align-text-bottom text-primary" />
-                    <IconifyIcon icon="iconoir:multiple-pages-plus" className="fs-18 m-1 align-text-bottom text-primary" />
+                    <IconifyIcon icon="iconoir:multiple-pages-plus" className="fs-18 m-1 align-text-bottom text-primary cursor-pointer" onClick={() => handleDuplicate(item.id)} />
                 </td>
               </tr>
             ))}

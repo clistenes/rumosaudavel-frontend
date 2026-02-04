@@ -9,6 +9,7 @@ export const MENU_ITEMS: MenuItemType[] = [
   {
     key: 'menu',
     label: 'Menu',
+    icon: 'iconoir:home-simple',
     url: '/testes',
   },
   {
