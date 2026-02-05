@@ -17,9 +17,8 @@ const LoginForm = () => {
 
       <div className="form-group row mt-3">
         <Col sm={6} className="">
-          <Link href="/auth/reset-pass" className="text-muted font-13">
-            
-            Forgot password?
+          <Link href="/auth/esqueci-senha" className="text-muted font-13">
+            Esqueceu a senha?
           </Link>
         </Col>
       </div>
