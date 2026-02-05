@@ -1,9 +1,15 @@
+'use client'
+
 import Image from 'next/image'
 import { Dropdown, DropdownDivider, DropdownItem, DropdownMenu, DropdownToggle } from 'react-bootstrap'
+import { signOut } from 'next-auth/react'
 import avatar1 from '@/assets/images/users/avatar-1.jpg'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 
 const ProfileDropdown = () => {
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/auth/login' })
+  }
   return (
     <Dropdown as={'li'} className="topbar-item">
       <DropdownToggle as={'a'} className="nav-link arrow-none nav-icon" role="button" aria-haspopup="false" aria-expanded="false">
@@ -39,7 +45,7 @@ const ProfileDropdown = () => {
           <IconifyIcon icon="la:question-circle" className="fs-18 me-1 align-text-bottom" /> Help Center
         </DropdownItem>
         <DropdownDivider className="mb-0" />
-        <DropdownItem className="text-danger" href="/auth/login">
+        <DropdownItem className="text-danger" onClick={handleLogout}>
           <IconifyIcon icon="la:power-off" className="fs-18 me-1 align-text-bottom" /> Logout
         </DropdownItem>
       </DropdownMenu>
