@@ -16,7 +16,7 @@ export default withAuth(
       const userType = token.type as number
       switch (userType) {
         case 1:
-          return NextResponse.redirect(new URL('/adm', request.url))
+          return NextResponse.redirect(new URL('/inicio', request.url))
         case 2:
           return NextResponse.redirect(new URL('/participante', request.url))
         case 3:
@@ -33,7 +33,7 @@ export default withAuth(
     const userType = token.type as number
     
     // Proteção de rotas Admin
-    if (pathname.startsWith('/adm') && userType !== 1) {
+    if ((pathname.startsWith('/inicio') || pathname.startsWith('/adm')) && userType !== 1) {
       return NextResponse.redirect(new URL('/auth/login', request.url))
     }
     
@@ -64,6 +64,7 @@ export default withAuth(
         
         const userType = token.type as number
         
+        if (pathname.startsWith('/inicio') && userType !== 1) return false
         if (pathname.startsWith('/adm') && userType !== 1) return false
         if (pathname.startsWith('/participante') && userType !== 2) return false
         if (pathname.startsWith('/empresa') && userType !== 3) return false
@@ -78,5 +79,5 @@ export default withAuth(
 )
 
 export const config = {
-  matcher: ['/', '/adm/:path*', '/participante/:path*', '/empresa/:path*'],
+  matcher: ['/', '/inicio/:path*', '/adm/:path*', '/participante/:path*', '/empresa/:path*'],
 }
