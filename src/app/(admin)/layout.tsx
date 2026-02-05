@@ -1,13 +1,14 @@
 import Footer from '@/components/layouts/Footer'
 import LeftSideBar from '@/components/layouts/LeftSideBar'
 import TopBar from '@/components/layouts/TopBar'
+import { RoleGuard } from '@/components/auth/RoleGuard'
 import { ChildrenType } from '@/types/component-props'
 import React from 'react'
 import { Container } from 'react-bootstrap'
 
 const layout = ({ children }: ChildrenType) => {
   return (
-    <>
+    <RoleGuard allowedTypes={[1]}>
       <TopBar />
       <LeftSideBar />
       <div className="startbar-overlay d-print-none" />
@@ -19,7 +20,7 @@ const layout = ({ children }: ChildrenType) => {
           <Footer />
         </div>
       </div>
-    </>
+    </RoleGuard>
   )
 }
 

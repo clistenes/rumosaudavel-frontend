@@ -24,8 +24,8 @@ export const empresaSchema: yup.ObjectSchema<EmpresaForm> = yup.object({
           .mixed<"objetiva" | "dissertativa">()
           .oneOf(["objetiva", "dissertativa"])
           .required(),
-        opcoes: yup.string().nullable().notRequired(),
+        opcoes: yup.string(),
       })
     )
-    .optional(),
+    .required(),
 });

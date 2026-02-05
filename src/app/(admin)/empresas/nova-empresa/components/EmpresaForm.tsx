@@ -176,7 +176,7 @@ export default function EmpresaFormComponent() {
             variant="outline-primary"
             className="mb-3"
             onClick={() =>
-              append({ label: "", tipo: "dissertativa", opcoes: null })
+              append({ label: "", tipo: "dissertativa", opcoes: undefined })
             }
           >
             + Adicionar campo customizado
