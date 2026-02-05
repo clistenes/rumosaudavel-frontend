@@ -1,14 +1,18 @@
+'use client'
+
 import LogoBox from '@/components/LogoBox'
 import React, { Suspense } from 'react'
 import AppMenu from './components/AppMenu'
 import { getMenuItems } from '@/helpers/menu'
 import FallbackLoading from '@/components/FallbackLoading'
-import Image from 'next/image'
-import partyImg from '@/assets/images/extra/party.gif'
 import SimplebarReactClient from '@/components/wrappers/SimplebarReactClient'
+import { useSession } from 'next-auth/react'
 
 const LeftSideBar = () => {
-  const menuItems = getMenuItems()
+  const { data: session } = useSession()
+  const userType = session?.user?.type
+  const menuItems = getMenuItems(userType)
+
   return (
     <div className="startbar d-print-none">
       <div className="brand flex-column justify-content-center text-center">
@@ -20,7 +24,6 @@ const LeftSideBar = () => {
             <Suspense fallback={<FallbackLoading />}>
               <AppMenu menuItems={menuItems} />
             </Suspense>
-            
           </div>
         </SimplebarReactClient>
       </div>
