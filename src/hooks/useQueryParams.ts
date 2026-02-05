@@ -3,6 +3,7 @@ import { useSearchParams } from 'next/navigation'
 
 const useQueryParams = () => {
   const searchParams = useSearchParams()
+  if (!searchParams) return {}
   return Object.fromEntries([...searchParams])
 }
 
