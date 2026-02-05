@@ -26,7 +26,7 @@ const useSignIn = () => {
       // Redirecionar baseado no tipo de usuário
       switch (session.user.type) {
         case 1:
-          push('/adm')
+          push('/inicio')
           break
         case 2:
           push('/participante')
