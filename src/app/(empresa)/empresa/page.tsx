@@ -1,22 +1,50 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, Col, Row } from 'react-bootstrap'
-import { toast } from 'sonner'
-import IconifyIcon from '@/components/wrappers/IconifyIcon'
+import { Row, Col } from 'react-bootstrap'
+import { useRouter } from 'next/navigation'
+import PageTitle from '@/components/PageTitle'
+import DashboardCards from '@/components/DashboardCards'
+import type { DashboardCardProps } from '@/components/DashboardCards'
 
 export default function EmpresaDashboard() {
   const [stats, setStats] = useState({
-    percentual: 0,
-    total: 0,
-    usuarios: 0,
+    percentual: 68,
+    total: 102,
+    usuarios: 150,
   })
   const [loading, setLoading] = useState(true)
+  const navigate = useRouter()
 
   useEffect(() => {
     // Aqui você carregaria os dados da empresa
     setLoading(false)
   }, [])
+
+  const handleRelatoriosClick = () => {
+    navigate.push('/empresa/relatorios/geral')
+  }
+
+  const cards: DashboardCardProps[] = [
+    {
+      title: 'Participantes',
+      value: stats.usuarios,
+      icon: 'iconoir:community',
+      variant: 'primary'
+    },
+    {
+      title: 'Taxa de Resposta',
+      value: `${stats.percentual}%`,
+      icon: 'iconoir:percent-rotate-clockwise',
+      variant: 'success'
+    },
+    {
+      title: 'Respondentes',
+      value: stats.total,
+      icon: 'iconoir:clipboard-check',
+      variant: 'info'
+    }
+  ]
 
   if (loading) {
     return (
@@ -32,57 +60,16 @@ export default function EmpresaDashboard() {
     <>
       <Row className="mb-4">
         <Col>
-          <h4 className="page-title">Dashboard da Empresa</h4>
+          <PageTitle title="Dashboard Empresa" />
           <p className="text-muted">Acompanhamento dos resultados da sua empresa</p>
         </Col>
       </Row>
 
-      <Row>
-        <Col md={4}>
-          <Card className="widget-flat">
-            <Card.Body>
-              <div className="float-end">
-                <IconifyIcon icon="fa6-solid:chart-pie" className="widget-icon" />
-              </div>
-              <h5 className="text-muted fw-normal mt-0">Participação</h5>
-              <h3 className="mt-2 mb-0">{stats.percentual}%</h3>
-              <p className="mb-0 text-muted">
-                <span className="text-nowrap">Taxa de participação</span>
-              </p>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col md={4}>
-          <Card className="widget-flat">
-            <Card.Body>
-              <div className="float-end">
-                <IconifyIcon icon="fa6-solid:users" className="widget-icon" />
-              </div>
-              <h5 className="text-muted fw-normal mt-0">Respondentes</h5>
-              <h3 className="mt-2 mb-0">{stats.total}</h3>
-              <p className="mb-0 text-muted">
-                <span className="text-nowrap">Total de respondentes</span>
-              </p>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col md={4}>
-          <Card className="widget-flat">
-            <Card.Body>
-              <div className="float-end">
-                <IconifyIcon icon="fa6-solid:user-check" className="widget-icon" />
-              </div>
-              <h5 className="text-muted fw-normal mt-0">Cadastrados</h5>
-              <h3 className="mt-2 mb-0">{stats.usuarios}</h3>
-              <p className="mb-0 text-muted">
-                <span className="text-nowrap">Usuários cadastrados</span>
-              </p>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      <DashboardCards 
+        cards={cards}
+        showManualCard={true}
+        manualCardOnClick={handleRelatoriosClick}
+      />
     </>
   )
 }
