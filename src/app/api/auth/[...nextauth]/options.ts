@@ -195,7 +195,7 @@ export const options: NextAuthOptions = {
           if (session?.user?.type) {
             switch (session.user.type) {
               case 1:
-                return `${baseUrl}/adm`
+                return `${baseUrl}/inicio`
               case 2:
                 return `${baseUrl}/participante`
               case 3:

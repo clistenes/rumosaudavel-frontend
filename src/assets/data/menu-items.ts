@@ -1,24 +1,13 @@
 import type { MenuItemType } from '@/types/menu'
 
-export const MENU_ITEMS: MenuItemType[] = [
-  // {
-  //   key: 'navigation',
-  //   label: 'Navigation',
-  //   isTitle: true,
-  // },
-  {
-    key: 'menu',
-    label: 'Menu',
-    icon: 'iconoir:home-simple',
-    url: '/testes',
-  },
+// Menu para Administrador (type 1)
+export const MENU_ITEMS_ADMIN: MenuItemType[] = [
   {
     key: 'dashboard',
     label: 'Dashboard',
     icon: 'iconoir:home-simple',
     url: '/inicio',
   },
-
   {
     key: 'questionarios',
     label: 'Questionários',
@@ -38,7 +27,7 @@ export const MENU_ITEMS: MenuItemType[] = [
       },
     ]
   },
-    {
+  {
     key: 'programas',
     label: 'Programas',
     icon: 'iconoir:suitcase',
@@ -57,7 +46,7 @@ export const MENU_ITEMS: MenuItemType[] = [
       },
     ]
   },
-     {
+  {
     key: 'empresas',
     label: 'Empresas',
     icon: 'iconoir:building',
@@ -86,7 +75,6 @@ export const MENU_ITEMS: MenuItemType[] = [
         url: '/empresas/pesquisar-usuario',
         parentKey: 'empresas',
       },
-      
       {
         key: 'termo-consentimento',
         label: 'Termo de Consentimento',
@@ -95,17 +83,11 @@ export const MENU_ITEMS: MenuItemType[] = [
       },
     ]
   },
-       {
+  {
     key: 'adm',
     label: 'Administração',
     icon: 'iconoir:building',
     children: [
-      // {
-      //   key: 'novo-acesso',
-      //   label: 'Novo Acesso',
-      //   url: '/adm/novo-acesso',
-      //   parentKey: 'adm',
-      // },
       {
         key: 'lista-acessos',
         label: 'Lista de Acessos',
@@ -132,660 +114,94 @@ export const MENU_ITEMS: MenuItemType[] = [
     label: 'Sair',
     url: '/auth/logout',
   },
-  {
-    key: 'dashboards',
-    icon: 'iconoir:report-columns',
-    label: 'Dashboards',
-    children: [
-      {
-        key: 'dashboard-analytics',
-        label: 'Analytics',
-        url: '/dashboard/analytics',
-        parentKey: 'dashboards',
-      },
-      {
-        key: 'dashboard-ecommerce',
-        label: 'Sales',
-        url: '/dashboard/sales',
-        parentKey: 'dashboards',
-      },
-    ],
-  },
-  {
-    key: 'ecommerce',
-    icon: 'iconoir:cart-alt',
-    label: 'Ecommerce',
-    children: [
-      {
-        key: 'products',
-        label: 'Products',
-        url: '/ecommerce/products',
-        parentKey: 'ecommerce',
-      },
-      {
-        key: 'customers',
-        label: 'Customers',
-        url: '/ecommerce/customers',
-        parentKey: 'ecommerce',
-      },
-      {
-        key: 'customer-details',
-        label: 'Customer Details',
-        url: '/ecommerce/customer-details',
-        parentKey: 'ecommerce',
-      },
-      {
-        key: 'orders',
-        label: 'Orders',
-        url: '/ecommerce/orders',
-        parentKey: 'ecommerce',
-      },
-      {
-        key: 'order-details',
-        label: 'Order Details',
-        url: '/ecommerce/order-details',
-        parentKey: 'ecommerce',
-      },
-      {
-        key: 'refunds',
-        label: 'Refunds',
-        url: '/ecommerce/refunds',
-        parentKey: 'ecommerce',
-      },
-    ],
-  },
-  {
-    key: 'projects',
-    label: 'Projects',
-    icon: 'iconoir:asana',
-    children: [
-      {
-        key: 'overview',
-        label: 'Overview',
-        url: '/projects/overview',
-        parentKey: 'projects',
-      },
-      {
-        key: 'project',
-        label: 'Projects',
-        url: '/projects',
-        parentKey: 'projects',
-      },
-      {
-        key: 'board',
-        label: 'Board',
-        url: '/projects/kanban',
-        parentKey: 'projects',
-      },
-      {
-        key: 'teams',
-        label: 'Teams',
-        url: '/projects/teams',
-        parentKey: 'projects',
-      },
-      {
-        key: 'files',
-        label: 'Files',
-        url: '/projects/files',
-        parentKey: 'projects',
-      },
-      {
-        key: 'create-project',
-        label: 'Create Project',
-        url: '/projects/create-project',
-        parentKey: 'projects',
-      },
-    ],
-  },
-  {
-    key: 'analytics',
-    label: 'Analytics',
-    icon: 'iconoir:reports',
-    children: [
-      {
-        key: 'customer',
-        label: 'Customers',
-        url: '/analytics/customer',
-        parentKey: 'analytics',
-      },
-      {
-        key: 'reports',
-        label: 'Reports',
-        url: '/analytics/reports',
-        parentKey: 'analytics',
-      },
-    ],
-  },
-  {
-    key: 'chat',
-    label: 'Chat',
-    icon: 'iconoir:chat-bubble',
-    url: '/chat',
-  },
-  {
-    key: 'contact-list',
-    label: 'Contact List',
-    icon: 'iconoir:community',
-    url: '/contacts',
-  },
-  {
-    key: 'calendar',
-    label: 'Calendar',
-    icon: 'iconoir:calendar',
-    url: '/calendar',
-  },
-  {
-    key: 'invoice',
-    label: 'Invoice',
-    icon: 'iconoir:paste-clipboard',
-    url: '/invoice',
-  },
-  {
-    key: 'components',
-    label: 'COMPONENTS',
-    isTitle: true,
-  },
-  {
-    key: 'base-ui',
-    icon: 'iconoir:compact-disc',
-    label: 'UI Elements',
-    children: [
-      {
-        key: 'base-ui-alerts',
-        label: 'Alerts',
-        url: '/ui/alerts',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-avatars',
-        label: 'Avatars',
-        url: '/ui/avatars',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-buttons',
-        label: 'Buttons',
-        url: '/ui/buttons',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-badges',
-        label: 'Badges',
-        url: '/ui/badges',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-cards',
-        label: 'Cards',
-        url: '/ui/cards',
-        parentKey: 'base-ui',
-      },
+]
 
-      {
-        key: 'base-ui-carousel',
-        label: 'Carousels',
-        url: '/ui/carousels',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-dropdowns',
-        label: 'Dropdowns',
-        url: '/ui/dropdowns',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-grids',
-        label: 'Grids',
-        url: '/ui/grids',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-images',
-        label: 'Images',
-        url: '/ui/images',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-list',
-        label: 'List',
-        url: '/ui/list',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-modals',
-        label: 'Modals',
-        url: '/ui/modals',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-navs',
-        label: 'Navs',
-        url: '/ui/navs',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-navbar',
-        label: 'Navbar',
-        url: '/ui/navbar',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-offcanvas',
-        label: 'Offcanvas',
-        url: '/ui/offcanvas',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-pagination',
-        label: 'Paginations',
-        url: '/ui/paginations',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-popover-tooltip',
-        label: 'Popovers & Tooltips',
-        url: '/ui/popovers-tooltips',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-progress',
-        label: 'Progress',
-        url: '/ui/progress',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-spinners',
-        label: 'Spinners',
-        url: '/ui/spinners',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-tabs-accordion',
-        label: 'Tabs & Accordions',
-        url: '/ui/tabs-accordion',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-typography',
-        label: 'Typography',
-        url: '/ui/typography',
-        parentKey: 'base-ui',
-      },
-      {
-        key: 'base-ui-videos',
-        label: 'Videos',
-        url: '/ui/videos',
-        parentKey: 'base-ui',
-      },
-    ],
+// Menu para Participante (type 2)
+export const MENU_ITEMS_PARTICIPANTE: MenuItemType[] = [
+  {
+    key: 'dashboard',
+    label: 'Início',
+    icon: 'iconoir:home-simple',
+    url: '/participante',
   },
   {
-    key: 'advanced-ui',
-    icon: 'iconoir:peace-hand',
-    badge: {
-      text: 'New',
-      variant: 'success',
-    },
-    label: 'Advanced UI',
-    children: [
-      {
-        key: 'advanced-ui-animation',
-        label: 'Animation',
-        url: '/advanced/animation',
-        parentKey: 'advanced-ui',
-      },
-      {
-        key: 'advanced-ui-clipboard',
-        label: 'Clip Board',
-        url: '/advanced/clipboard',
-        parentKey: 'advanced-ui',
-      },
-      {
-        key: 'advanced-ui-dragula',
-        label: 'Dragula',
-        url: '/advanced/dragula',
-        parentKey: 'advanced-ui',
-      },
-      {
-        key: 'advanced-ui-file-manager',
-        label: 'File Manager',
-        url: '/advanced/file-manager',
-        parentKey: 'advanced-ui',
-      },
-      {
-        key: 'advanced-ui-highlight',
-        label: 'Highlight',
-        url: '/advanced/highlight',
-        parentKey: 'advanced-ui',
-      },
-      {
-        key: 'advanced-ui-range-slider',
-        label: 'Range Slider',
-        url: '/advanced/range-slider',
-        parentKey: 'advanced-ui',
-      },
-      {
-        key: 'advanced-ui-ratings',
-        label: 'Ratings',
-        url: '/advanced/ratings',
-        parentKey: 'advanced-ui',
-      },
-      {
-        key: 'advanced-ui-ribbons',
-        label: 'Ribbons',
-        url: '/advanced/ribbons',
-        parentKey: 'advanced-ui',
-      },
-      {
-        key: 'advanced-ui-sweet-alert',
-        label: 'Sweet Alerts',
-        url: '/advanced/alerts',
-        parentKey: 'advanced-ui',
-      },
-      {
-        key: 'advanced-ui-toast',
-        label: 'Toasts',
-        url: '/advanced/toasts',
-        parentKey: 'advanced-ui',
-      },
-    ],
+    key: 'questionarios',
+    label: 'Meus Questionários',
+    icon: 'iconoir:paste-clipboard',
+    url: '/participante/questionarios',
   },
   {
-    key: 'forms',
-    icon: 'iconoir:cube-hole',
-    label: 'Forms',
-    children: [
-      {
-        key: 'forms-basic-elements',
-        label: 'Basic Elements',
-        url: '/forms/basic',
-        parentKey: 'forms',
-      },
-      {
-        key: 'forms-advance',
-        label: 'Advance Elements',
-        url: '/forms/advance',
-        parentKey: 'forms',
-      },
-      {
-        key: 'forms-validation',
-        label: 'Validation',
-        url: '/forms/validation',
-        parentKey: 'forms',
-      },
-      {
-        key: 'forms-wizard',
-        label: 'Wizard',
-        url: '/forms/wizard',
-        parentKey: 'forms',
-      },
-      {
-        key: 'forms-editors',
-        label: 'Editors',
-        url: '/forms/editors',
-        parentKey: 'forms',
-      },
-      {
-        key: 'forms-file-uploads',
-        label: 'File Upload',
-        url: '/forms/file-uploads',
-        parentKey: 'forms',
-      },
-      {
-        key: 'forms-image-crop',
-        label: 'Image Crop',
-        url: '/forms/image-crop',
-        parentKey: 'forms',
-      },
-    ],
+    key: 'prontuario',
+    label: 'Meu Prontuário',
+    icon: 'iconoir:health-shield',
+    url: '/participante/prontuario',
   },
   {
-    key: 'charts',
-    label: 'Charts',
-    icon: 'iconoir:cube-hole',
-    children: [
-      {
-        key: 'charts-apex',
-        label: 'Apex',
-        url: '/charts/apex',
-        parentKey: 'charts',
-      },
-      {
-        key: 'charts-justgage',
-        label: 'JustGage',
-        url: '/charts/justgage',
-        parentKey: 'charts',
-      },
-      {
-        key: 'charts-chartjs',
-        label: 'ChartjS',
-        url: '/charts/chartjs',
-        parentKey: 'charts',
-      },
-      {
-        key: 'charts-toast',
-        label: 'Toast',
-        url: '/charts/toast',
-        parentKey: 'charts',
-      },
-    ],
+    key: 'contatos',
+    label: 'Contatos',
+    icon: 'iconoir:community',
+    url: '/participante/contatos',
   },
   {
-    key: 'tables',
-    icon: 'iconoir:list',
-    label: 'Tables',
-    children: [
-      {
-        key: 'tables-basic',
-        label: 'Basic Tables',
-        url: '/tables/basic',
-        parentKey: 'tables',
-      },
-      {
-        key: 'tables-data-tables',
-        label: 'Datatables',
-        url: '/tables/data-tables',
-        parentKey: 'tables',
-      },
-    ],
-  },
-  {
-    key: 'icons',
-    icon: 'iconoir:fire-flame',
-    label: 'Icons',
-    children: [
-      {
-        key: 'icons-font-awesome',
-        label: 'Font Awesome',
-        url: '/icons/fa',
-        parentKey: 'icons',
-      },
-      {
-        key: 'icons-line-awesome',
-        label: 'Line Awesome',
-        url: '/icons/la',
-        parentKey: 'icons',
-      },
-      {
-        key: 'icons-icofont',
-        label: 'Icofont',
-        url: '/icons/icofont',
-        parentKey: 'icons',
-      },
-      {
-        key: 'icons-iconoir',
-        label: 'Iconoir',
-        url: '/icons/iconoir',
-        parentKey: 'icons',
-      },
-    ],
-  },
-  {
-    key: 'maps',
-    icon: 'iconoir:map-pin',
-    label: 'Maps',
-    children: [
-      {
-        key: 'maps-google',
-        label: 'Google Maps',
-        url: '/maps/google',
-        parentKey: 'maps',
-      },
-      {
-        key: 'maps-leaflet',
-        label: 'Leaflet Maps',
-        url: '/maps/leaflet',
-        parentKey: 'maps',
-      },
-      {
-        key: 'maps-vector',
-        label: 'Vector Maps',
-        url: '/maps/vector',
-        parentKey: 'maps',
-      },
-    ],
-  },
-  {
-    key: 'email-templates',
-    label: 'Email Templates',
-    icon: 'iconoir:send-mail',
-    children: [
-      {
-        key: 'email-templates-basic',
-        label: 'Basic Action Email',
-        url: '/email-templates/basic',
-        parentKey: 'email-templates',
-      },
-      {
-        key: 'email-templates-alert',
-        label: 'Alert Email',
-        url: '/email-templates/alert',
-        parentKey: 'email-templates',
-      },
-      {
-        key: 'email-templates-billing',
-        label: 'Billing Email',
-        url: '/email-templates/billing',
-        parentKey: 'email-templates',
-      },
-    ],
-  },
-  {
-    key: 'crafted',
-    label: 'CRAFTED',
-    isTitle: true,
-  },
-  {
-    key: 'pages',
-    label: 'Pages',
-    isTitle: false,
-    icon: 'iconoir:page-star',
-    children: [
-      {
-        key: 'page-profile',
-        label: 'Profile',
-        url: '/pages/profile',
-        parentKey: 'pages',
-      },
-      {
-        key: 'page-notifications',
-        label: 'Notifications',
-        url: '/pages/notifications',
-        parentKey: 'pages',
-      },
-      {
-        key: 'page-timeline',
-        label: 'Timeline',
-        url: '/pages/timeline',
-        parentKey: 'pages',
-      },
-      {
-        key: 'page-tree-view',
-        label: 'Treeview',
-        url: '/pages/treeview',
-        parentKey: 'pages',
-      },
-      {
-        key: 'page-starter',
-        label: 'Starter Page',
-        url: '/pages/starter',
-        parentKey: 'pages',
-      },
-      {
-        key: 'page-pricing',
-        label: 'Pricing',
-        url: '/pages/pricing',
-        parentKey: 'pages',
-      },
-      {
-        key: 'page-blogs',
-        label: 'Blogs',
-        url: '/pages/blogs',
-        parentKey: 'pages',
-      },
-      {
-        key: 'page-faqs',
-        label: 'FAQs',
-        url: '/pages/faqs',
-        parentKey: 'pages',
-      },
-      {
-        key: 'page-gallery',
-        label: 'Gallery',
-        url: '/pages/gallery',
-        parentKey: 'pages',
-      },
-    ],
-  },
-  {
-    key: 'page-authentication',
-    label: 'Authentication',
-    isTitle: false,
-    icon: 'iconoir:fingerprint-lock-circle',
-    children: [
-      {
-        key: 'log-in',
-        label: 'Log In',
-        url: '/auth/login',
-        parentKey: 'page-authentication',
-      },
-      {
-        key: 'register',
-        label: 'Register',
-        url: '/auth/register',
-        parentKey: 'page-authentication',
-      },
-      {
-        key: 'reset-pass',
-        label: 'Re-Password',
-        url: '/auth/reset-pass',
-        parentKey: 'page-authentication',
-      },
-      {
-        key: 'lock-screen',
-        label: 'Lock Screen',
-        url: '/auth/lock-screen',
-        parentKey: 'page-authentication',
-      },
-      {
-        key: 'maintenance',
-        label: 'Maintenance',
-        url: '/maintenance',
-        target: '_blank',
-        parentKey: 'page-authentication',
-      },
-      {
-        key: 'error-404',
-        label: 'Error 404',
-        url: '/not-found',
-        parentKey: 'page-authentication',
-      },
-      {
-        key: 'error-500',
-        label: 'Error 500',
-        url: '/error-500',
-        parentKey: 'page-authentication',
-      },
-    ],
+    key: 'sair',
+    icon: 'la:power-off',
+    label: 'Sair',
+    url: '/auth/logout',
   },
 ]
+
+// Menu para Empresa (type 3)
+export const MENU_ITEMS_EMPRESA: MenuItemType[] = [
+  {
+    key: 'dashboard',
+    label: 'Dashboard',
+    icon: 'iconoir:home-simple',
+    url: '/empresa',
+  },
+  {
+    key: 'participantes',
+    label: 'Participantes',
+    icon: 'iconoir:community',
+    url: '/empresa/participantes',
+  },
+  {
+    key: 'relatorios',
+    label: 'Relatórios',
+    icon: 'iconoir:report-columns',
+    children: [
+      {
+        key: 'relatorio-geral',
+        label: 'Relatório Geral',
+        url: '/empresa/relatorios/geral',
+        parentKey: 'relatorios',
+      },
+      {
+        key: 'relatorio-grafico',
+        label: 'Gráficos',
+        url: '/empresa/relatorios/graficos',
+        parentKey: 'relatorios',
+      },
+      {
+        key: 'relatorio-semaforo',
+        label: 'Semáforo',
+        url: '/empresa/relatorios/semaforo',
+        parentKey: 'relatorios',
+      },
+      {
+        key: 'relatorio-heatmap',
+        label: 'Heatmap',
+        url: '/empresa/relatorios/heatmap',
+        parentKey: 'relatorios',
+      },
+    ]
+  },
+  {
+    key: 'sair',
+    icon: 'la:power-off',
+    label: 'Sair',
+    url: '/auth/logout',
+  },
+]
+
+// Menu default (mantido para compatibilidade)
+export const MENU_ITEMS = MENU_ITEMS_ADMIN

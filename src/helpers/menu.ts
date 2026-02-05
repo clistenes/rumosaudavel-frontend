@@ -1,9 +1,17 @@
-
-import { MENU_ITEMS } from '@/assets/data/menu-items'
+import { MENU_ITEMS_ADMIN, MENU_ITEMS_PARTICIPANTE, MENU_ITEMS_EMPRESA } from '@/assets/data/menu-items'
 import type { MenuItemType } from '@/types/menu'
 
-export const getMenuItems = (): MenuItemType[] => {
-  return MENU_ITEMS
+export const getMenuItems = (userType?: number): MenuItemType[] => {
+  switch (userType) {
+    case 1:
+      return MENU_ITEMS_ADMIN
+    case 2:
+      return MENU_ITEMS_PARTICIPANTE
+    case 3:
+      return MENU_ITEMS_EMPRESA
+    default:
+      return MENU_ITEMS_ADMIN
+  }
 }
 
 export const findAllParent = (menuItems: MenuItemType[], menuItem: MenuItemType): string[] => {
