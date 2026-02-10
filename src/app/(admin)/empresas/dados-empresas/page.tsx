@@ -5,6 +5,7 @@ import { Row, Table } from 'react-bootstrap'
 import { empresasData } from './data'
 import Image from 'next/image'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
+import Link from 'next/link'
 
 export const metadata = { title: 'Todas as Empresas' }
 const TodasEmpresas = () => {
@@ -51,8 +52,9 @@ const TodasEmpresas = () => {
                   <IconifyIcon icon="iconoir:link" className="fs-18 m-1 align-text-bottom text-primary rounded" />
                 </td>
                 <td>
-                  <IconifyIcon icon="iconoir:edit-pencil" className="fs-18 m-1 align-text-bottom text-primary" />
-
+                  <Link href="/empresas/editar-empresa" className="text-decoration-none">
+                    <IconifyIcon icon="iconoir:edit-pencil" className="fs-18 m-1 align-text-bottom text-primary cursor-pointer" />
+                  </Link>
                 </td>
              
               </tr>
