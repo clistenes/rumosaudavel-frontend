@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 
 const useSignIn = () => {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { push } = useRouter()
   const searchParams = useSearchParams()
   const { data: session, status } = useSession()
@@ -35,7 +36,8 @@ const useSignIn = () => {
           push('/empresa')
           break
         default:
-          push('/auth/login')
+          // Permanece na página se tipo não reconhecido
+          console.error('Tipo de usuário não reconhecido:', session.user.type)
       }
     }
   }, [session, status, push, searchParams])
@@ -45,7 +47,7 @@ const useSignIn = () => {
     password: yup.string().required('Por favor, insira sua senha'),
   })
 
-  const { control, handleSubmit } = useForm({
+  const { control, handleSubmit, setValue } = useForm({
     resolver: yupResolver(loginFormSchema),
     defaultValues: {
       login: '',
@@ -57,13 +59,18 @@ const useSignIn = () => {
 
   const login = handleSubmit(async (values: LoginFormFields) => {
     setLoading(true)
+    setError(null)
     
     try {
+      console.log('Tentando login com:', values.login)
+      
       const result = await signIn('credentials', {
         redirect: false,
         login: values.login,
         password: values.password,
       })
+
+      console.log('Resultado do login:', result)
 
       if (result?.ok) {
         toast.success('Login realizado com sucesso!', {
@@ -71,20 +78,28 @@ const useSignIn = () => {
         })
         // O redirecionamento será feito pelo useEffect quando a sessão atualizar
       } else {
+        const errorMessage = result?.error || 'Credenciais inválidas'
+        console.error('Erro ao fazer login:', errorMessage)
+        setError(errorMessage)
         toast.error('Erro ao fazer login', {
-          description: result?.error || 'Credenciais inválidas',
+          description: errorMessage,
         })
+        // Limpa a senha para nova tentativa
+        setValue('password', '')
       }
     } catch (error) {
+      console.error('Erro inesperado no login:', error)
+      const errorMsg = 'Ocorreu um erro inesperado. Tente novamente.'
+      setError(errorMsg)
       toast.error('Erro ao fazer login', {
-        description: 'Ocorreu um erro inesperado. Tente novamente.',
+        description: errorMsg,
       })
     } finally {
       setLoading(false)
     }
   })
 
-  return { loading, login, control }
+  return { loading, login, control, error }
 }
 
 export default useSignIn

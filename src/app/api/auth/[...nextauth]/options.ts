@@ -110,13 +110,20 @@ export const options: NextAuthOptions = {
           throw new Error('Credenciais inválidas (Modo Demo)')
         }
 
-        // Modo Produção - login via API Laravel
+        // Modo Produção - login via API Go
         try {
-          const response = await axios.post<ApiResponse<UserType>>(
-            `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+          // Criar FormData para envio
+          const formData = new FormData()
+          formData.append('login', credentials.login)
+          formData.append('password', credentials.password)
+          console.log('Enviando login para API:', credentials.login)
+          const response = await axios.post(
+            `${process.env.NEXT_PUBLIC_API_URL}/login`,
+            formData,
             {
-              login: credentials.login,
-              password: credentials.password,
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
             }
           )
 
@@ -138,6 +145,7 @@ export const options: NextAuthOptions = {
 
           throw new Error(response.data.message || 'Credenciais inválidas')
         } catch (error) {
+          console.log('Erro ao fazer login:', error)  
           if (axios.isAxiosError(error)) {
             throw new Error(error.response?.data?.message || 'Erro ao fazer login')
           }
