@@ -7,6 +7,7 @@ import { useEffect } from 'react'
 import type { ChildrenType } from '@/types/component-props'
 import { Toaster } from 'sonner'
 import { NotificationProvider } from '@/context/useNotificationContext'
+import { DemoProvider } from '@/context/DemoContext'
 
 const LayoutProvider = dynamic(() => import('@/context/useLayoutContext').then((mod) => mod.LayoutProvider), { ssr: false })
 
@@ -25,12 +26,14 @@ const AppProvidersWrapper = ({ children }: ChildrenType) => {
 
   return (
     <SessionProvider>
-      <LayoutProvider>
-        <NotificationProvider>
-        {children}
-        <Toaster richColors />
-        </NotificationProvider>
-      </LayoutProvider>
+      <DemoProvider>
+        <LayoutProvider>
+          <NotificationProvider>
+          {children}
+          <Toaster richColors />
+          </NotificationProvider>
+        </LayoutProvider>
+      </DemoProvider>
     </SessionProvider>
   )
 }

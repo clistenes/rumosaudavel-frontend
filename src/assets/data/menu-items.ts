@@ -84,6 +84,61 @@ export const MENU_ITEMS_ADMIN: MenuItemType[] = [
     ]
   },
   {
+    key: 'relatorios',
+    label: 'Relatórios',
+    icon: 'iconoir:stats-report',
+    children: [
+      {
+        key: 'relatorio-analitico',
+        label: 'Dashboard Analítico',
+        url: '/adm/relatorios/analitico',
+        parentKey: 'relatorios',
+      },
+      {
+        key: 'relatorio-grafico',
+        label: 'Gráfico (Pizza)',
+        url: '/adm/relatorios/grafico',
+        parentKey: 'relatorios',
+      },
+      {
+        key: 'relatorio-termometro',
+        label: 'Termômetro',
+        url: '/adm/relatorios/termometro',
+        parentKey: 'relatorios',
+      },
+      {
+        key: 'relatorio-semaforo',
+        label: 'Semáforo / Heatmap',
+        url: '/adm/relatorios/semaforo-heatmap',
+        parentKey: 'relatorios',
+      },
+      {
+        key: 'relatorio-individual',
+        label: 'Individual',
+        url: '/adm/relatorios/individual',
+        parentKey: 'relatorios',
+      },
+    ]
+  },
+  {
+    key: 'analytics',
+    label: 'Analytics',
+    icon: 'iconoir:graph-up',
+    url: '/adm/dashboard-analytics',
+  },
+  {
+    key: 'notificacoes-menu',
+    label: 'Notificações',
+    icon: 'iconoir:bell',
+    url: '/adm/notificacoes',
+  },
+  {
+    key: 'configuracoes-menu',
+    label: 'Configurações',
+    icon: 'iconoir:settings',
+    url: '/adm/configuracoes',
+  },
+  {
     key: 'adm',
     label: 'Administração',
     icon: 'iconoir:building',
