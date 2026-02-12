@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
         port: '8000',
         pathname: '/storage/**',
       },
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
   },
 }
