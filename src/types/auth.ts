@@ -18,6 +18,20 @@ export type UserType = {
     logotipo: string
     slug: string
   }
+  // Campos adicionais para demo mode
+  perfil?: string
+  avatar?: string
+  cargo?: string
+  departamento?: string
+  cpf?: string
+  telefone?: string
+  phq9Ultimo?: number
+  gad7Ultimo?: number
+  statusRisco?: string
+  tendencia?: string
+  ultimaAvaliacao?: string
+  proximaReavaliacao?: string
+  alertasPendentes?: number
 }
 
 export type ApiResponse<T> = {
