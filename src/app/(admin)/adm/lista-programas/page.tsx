@@ -1,25 +1,37 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, Table, Button, Badge, Form, InputGroup, Row, Col, Modal } from 'react-bootstrap'
+import { Card, Table, Button, Badge, Form, InputGroup, Row, Col, Modal, Spinner } from 'react-bootstrap'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import { useDemo } from '@/context/DemoContext'
 import { useNotificationContext } from '@/context/useNotificationContext'
+import { useProgramas, useRemoverPrograma } from '@/hooks/api/useProgramas'
+import { isDemoMode } from '@/utils/env'
 
 export default function ListaProgramas() {
   const router = useRouter()
   const { showNotification } = useNotificationContext()
-  const { programas, deletePrograma, duplicarPrograma } = useDemo()
+  const demoMode = isDemoMode()
+  const demoContext = useDemo()
+  
+  // Hooks da API
+  const { data: programasData, loading: loadingProgramas, error, refetch } = useProgramas({ perPage: 100 })
+  const { mutateAsync: removerPrograma } = useRemoverPrograma()
+  
+  // Dados
+  const programas: any[] = demoMode ? demoContext.programas : (programasData?.data || [])
+  
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState<string>('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [programaToDelete, setProgramaToDelete] = useState<any>(null)
 
   const programasFiltrados = programas.filter((p: any) => {
-    const matchBusca = p.nome?.toLowerCase().includes(busca.toLowerCase()) ||
+    const matchBusca = !busca || 
+                      p.nome?.toLowerCase().includes(busca.toLowerCase()) ||
                       p.descricao?.toLowerCase().includes(busca.toLowerCase())
     const matchStatus = !filtroStatus || p.status === filtroStatus
     return matchBusca && matchStatus
@@ -30,33 +42,80 @@ export default function ListaProgramas() {
     setShowDeleteModal(true)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (programaToDelete) {
-      deletePrograma(programaToDelete.id)
-      showNotification({
-        message: `Programa "${programaToDelete.nome}" excluído com sucesso.`,
-        variant: 'success'
-      })
-      setShowDeleteModal(false)
-      setProgramaToDelete(null)
+      try {
+        if (demoMode) {
+          demoContext.deletePrograma(programaToDelete.id)
+        } else {
+          await removerPrograma(programaToDelete.id)
+          refetch()
+        }
+        showNotification({
+          message: `Programa "${programaToDelete.nome}" excluído com sucesso.`,
+          variant: 'success'
+        })
+      } catch (error) {
+        showNotification({
+          message: 'Erro ao excluir programa. Tente novamente.',
+          variant: 'danger'
+        })
+      } finally {
+        setShowDeleteModal(false)
+        setProgramaToDelete(null)
+      }
     }
   }
 
   const handleDuplicar = (programa: any) => {
-    const novoPrograma = {
-      ...programa,
-      nome: `${programa.nome} (Cópia)`,
-      status: 'ativo'
+    if (demoMode) {
+      demoContext.duplicarPrograma(programa.id)
+      showNotification({
+        message: `Programa "${programa.nome}" duplicado com sucesso!`,
+        variant: 'success'
+      })
+    } else {
+      showNotification({
+        message: 'Função de duplicar não disponível em produção ainda.',
+        variant: 'warning'
+      })
     }
-    // Add to demo context
-    showNotification({
-      message: `Programa "${programa.nome}" duplicado com sucesso!`,
-      variant: 'success'
-    })
   }
 
   const handleVincular = (programaId: number) => {
     router.push(`/adm/vincular-questionarios/${programaId}`)
+  }
+
+  // Loading state
+  if (!demoMode && loadingProgramas) {
+    return (
+      <>
+        <PageTitle title="Programas de Saúde" subName="Programas" />
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+          <Spinner animation="border" variant="primary" />
+        </div>
+      </>
+    )
+  }
+
+  // Error state
+  if (!demoMode && error) {
+    return (
+      <>
+        <PageTitle title="Programas de Saúde" subName="Programas" />
+        <Card className="text-center py-5">
+          <Card.Body>
+            <IconifyIcon icon="iconoir:wifi-off" style={{ fontSize: '48px' }} className="text-danger mb-3" />
+            <h5>Erro ao carregar programas</h5>
+            <p className="text-muted">{error.message}</p>
+            <Button variant="primary" onClick={refetch}>
+              <IconifyIcon icon="iconoir:refresh" className="me-2" />
+              Tentar novamente
+            </Button>
+          </Card.Body>
+        </Card>
+      </>
+    )
   }
 
   return (

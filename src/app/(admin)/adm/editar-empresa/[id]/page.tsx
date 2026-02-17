@@ -1,25 +1,39 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, Form, Button, Row, Col, Tabs, Tab, Alert, Badge, Table } from 'react-bootstrap'
+import { useState, useEffect } from 'react'
+import { Card, Form, Button, Row, Col, Tabs, Tab, Alert, Badge, Table, Spinner } from 'react-bootstrap'
 import { useRouter, useParams } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import ColorPicker from '@/components/ColorPicker'
+import { useDemo } from '@/context/DemoContext'
+import { useEmpresa, useAtualizarEmpresa } from '@/hooks/api/useEmpresas'
+import { useNotificationContext } from '@/context/useNotificationContext'
+import { isDemoMode } from '@/utils/env'
 
 export default function EditarEmpresa() {
   const router = useRouter()
   const params = useParams()
-  const empresaId = params.id as string
+  const empresaId = parseInt(params.id as string)
+  const { showNotification } = useNotificationContext()
+  const demoMode = isDemoMode()
+  const demoContext = useDemo()
+  
+  // Hooks da API
+  const { data: empresaData, loading: loadingEmpresa, error, refetch } = useEmpresa(demoMode ? null : empresaId)
+  const { mutateAsync: atualizarEmpresa, loading: salvando } = useAtualizarEmpresa()
+  
+  // Buscar empresa do demo context
+  const empresaDemo = demoMode ? demoContext.empresas.find((e: any) => e.id === empresaId) : null
+  const empresa = demoMode ? empresaDemo : (empresaData as any)?.data || empresaData
 
   const [activeTab, setActiveTab] = useState('dados')
-  const [salvando, setSalvando] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
 
-  // Dados mockados da empresa
-  const [nome, setNome] = useState('Empresa ABC Ltda')
-  const [slug, setSlug] = useState('empresa-abc')
-  const [introducao, setIntroducao] = useState('Bem-vindo ao programa de saúde ocupacional da Empresa ABC.')
+  // Dados da empresa
+  const [nome, setNome] = useState('')
+  const [slug, setSlug] = useState('')
+  const [introducao, setIntroducao] = useState('')
   const [cor, setCor] = useState('#FF6600')
   const [termoConsentimento, setTermoConsentimento] = useState(true)
   const [status, setStatus] = useState('ativa')
@@ -35,15 +49,87 @@ export default function EditarEmpresa() {
   const [filtroHeatmap1, setFiltroHeatmap1] = useState('')
   const [filtroHeatmap2, setFiltroHeatmap2] = useState('')
 
+  // Carregar dados da empresa
+  useEffect(() => {
+    if (empresa) {
+      setNome(empresa.nome || '')
+      setSlug(empresa.slug || '')
+      setIntroducao(empresa.introducao || '')
+      setCor(empresa.cor || '#FF6600')
+      setTermoConsentimento(empresa.termoConsentimento || true)
+      setStatus(empresa.status || 'ativa')
+    }
+  }, [empresa])
+
   const handleSalvar = async () => {
-    setSalvando(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setSalvando(false)
-    alert('Empresa atualizada com sucesso!')
+    try {
+      const dadosAtualizados = {
+        nome,
+        slug,
+        introducao,
+        cor,
+        termoConsentimento,
+        status
+      }
+
+      if (demoMode) {
+        // Modo Demo
+        demoContext.updateEmpresa(empresaId, dadosAtualizados)
+        showNotification({
+          message: 'Empresa atualizada com sucesso!',
+          variant: 'success'
+        })
+      } else {
+        // Modo Produção
+        await atualizarEmpresa({ id: empresaId, data: dadosAtualizados })
+        showNotification({
+          message: 'Empresa atualizada com sucesso!',
+          variant: 'success'
+        })
+        refetch()
+      }
+    } catch (error) {
+      showNotification({
+        message: 'Erro ao atualizar empresa. Tente novamente.',
+        variant: 'danger'
+      })
+    }
   }
 
   const handleCriarLogin = () => {
     setShowLoginModal(true)
+  }
+
+  // Loading state
+  if (loadingEmpresa) {
+    return (
+      <>
+        <PageTitle title="Editar Empresa" subName="Empresas" />
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+          <Spinner animation="border" variant="primary" />
+        </div>
+      </>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <>
+        <PageTitle title="Editar Empresa" subName="Empresas" />
+        <Card className="text-center py-5">
+          <Card.Body>
+            <IconifyIcon icon="iconoir:wifi-off" style={{ fontSize: '48px' }} className="text-danger mb-3" />
+            <h5>Erro ao carregar empresa</h5>
+            <p className="text-muted">{error.message}</p>
+            <Button variant="primary" onClick={refetch}>
+              <IconifyIcon icon="iconoir:refresh" className="me-2" />
+              Tentar novamente
+            </Button>
+          </Card.Body>
+        </Card>
+      </>
+    )
   }
 
   return (

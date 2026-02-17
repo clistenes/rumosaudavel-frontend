@@ -6,6 +6,10 @@ import { useRouter } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import ColorPicker from '@/components/ColorPicker'
+import { useDemo } from '@/context/DemoContext'
+import { useCriarEmpresa } from '@/hooks/api/useEmpresas'
+import { useNotificationContext } from '@/context/useNotificationContext'
+import { isDemoMode } from '@/utils/env'
 
 interface CampoPersonalizado {
   id: number
@@ -16,8 +20,12 @@ interface CampoPersonalizado {
 
 export default function AdicionarEmpresa() {
   const router = useRouter()
+  const { showNotification } = useNotificationContext()
+  const demoMode = isDemoMode()
+  const demoContext = useDemo()
+  const { mutateAsync: criarEmpresa, loading: salvando } = useCriarEmpresa()
+  
   const [activeTab, setActiveTab] = useState('dados')
-  const [salvando, setSalvando] = useState(false)
   const [sucesso, setSucesso] = useState(false)
 
   // Dados da empresa
@@ -83,18 +91,54 @@ export default function AdicionarEmpresa() {
       return
     }
 
-    setSalvando(true)
-    
-    // Simular salvamento
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    setSucesso(true)
-    setSalvando(false)
-    
-    // Redirecionar após 2 segundos
-    setTimeout(() => {
-      router.push('/adm/lista-empresas')
-    }, 2000)
+    try {
+      const empresaData = {
+        nome,
+        cnpj: '', // Será preenchido depois
+        email: '', // Será preenchido depois
+        telefone: '', // Será preenchido depois
+        cidade: '', // Será preenchido depois
+        estado: '', // Será preenchido depois
+        logo: undefined,
+        ativo: true,
+        camposPersonalizados: camposPersonalizados.map(c => ({
+          id: c.id,
+          nome: c.nome,
+          tipo: (c.tipo === 'radio' ? 'lista' : c.tipo) as 'texto' | 'lista',
+          obrigatorio: false,
+          opcoes: c.opcoes
+        }))
+      }
+
+      if (demoMode) {
+        // Modo Demo - usa contexto
+        demoContext.addEmpresa({
+          ...empresaData,
+          nomeCurto: nome,
+          slug,
+          introducao,
+          cor,
+          termoConsentimento
+        })
+        setSucesso(true)
+        setTimeout(() => {
+          router.push('/adm/lista-empresas')
+        }, 2000)
+      } else {
+        // Modo Produção - usa API
+        await criarEmpresa(empresaData)
+        showNotification({
+          message: 'Empresa criada com sucesso!',
+          variant: 'success'
+        })
+        router.push('/adm/lista-empresas')
+      }
+    } catch (error) {
+      showNotification({
+        message: 'Erro ao criar empresa. Tente novamente.',
+        variant: 'danger'
+      })
+    }
   }
 
   return (

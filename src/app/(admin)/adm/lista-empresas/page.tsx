@@ -1,38 +1,55 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Card, Table, Button, Badge, Form, InputGroup, Pagination, Modal } from 'react-bootstrap'
+import { Card, Table, Button, Badge, Form, InputGroup, Pagination, Modal, Spinner } from 'react-bootstrap'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
-import { useDemo } from '@/context/DemoContext'
+import { useEmpresas, useRemoverEmpresa } from '@/hooks/api/useEmpresas'
 import { useNotificationContext } from '@/context/useNotificationContext'
 
 export default function ListaEmpresas() {
   const router = useRouter()
   const { showNotification } = useNotificationContext()
-  const { empresas, deleteEmpresa } = useDemo()
+  
+  // Hooks da API
+  const { data: empresasData, loading: loadingEmpresas, error, refetch } = useEmpresas({ perPage: 100 })
+  const { mutateAsync: removerEmpresa, loading: deleting } = useRemoverEmpresa()
+  
+  // DEBUG: Logs para verificar dados
+  console.log('🔍 [ListaEmpresas] Debug:')
+  console.log('🔍 [ListaEmpresas] empresasData:', empresasData)
+  console.log('🔍 [ListaEmpresas] loading:', loadingEmpresas)
+  console.log('🔍 [ListaEmpresas] error:', error)
+  
+  // Dados das empresas
+  const empresas = empresasData?.data || []
+  console.log('🔍 [ListaEmpresas] empresas:', empresas)
+  console.log('🔍 [ListaEmpresas] Total de empresas:', empresas.length)
+  
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState<string>('')
   const [currentPage, setCurrentPage] = useState(1)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [empresaToDelete, setEmpresaToDelete] = useState<any>(null)
-  const itemsPerPage = 5
+  const itemsPerPage = 10
 
-  // Filtrar empresas
+  // Filtrar empresas localmente
   const empresasFiltradas = useMemo(() => {
-    return empresas.filter(empresa => {
-      const matchBusca = empresa.nome.toLowerCase().includes(busca.toLowerCase()) ||
-                        empresa.nomeCurto.toLowerCase().includes(busca.toLowerCase()) ||
-                        empresa.cnpj.includes(busca) ||
-                        empresa.setor.toLowerCase().includes(busca.toLowerCase())
-      const matchStatus = !filtroStatus || empresa.status === filtroStatus
+    return empresas.filter((empresa: any) => {
+      const matchBusca = !busca || 
+                        empresa.nome?.toLowerCase().includes(busca.toLowerCase()) ||
+                        empresa.cnpj?.includes(busca) ||
+                        empresa.cidade?.toLowerCase().includes(busca.toLowerCase())
+      const matchStatus = !filtroStatus || 
+                         (filtroStatus === 'ativo' && empresa.ativo) ||
+                         (filtroStatus === 'inativo' && !empresa.ativo)
       return matchBusca && matchStatus
     })
   }, [empresas, busca, filtroStatus])
 
-  // Paginação
+  // Paginação local
   const totalPages = Math.ceil(empresasFiltradas.length / itemsPerPage)
   const empresasPaginadas = empresasFiltradas.slice(
     (currentPage - 1) * itemsPerPage,
@@ -41,29 +58,21 @@ export default function ListaEmpresas() {
 
   // Exportar para Excel (CSV)
   const handleExportar = () => {
-    const headers = ['ID', 'Nome', 'CNPJ', 'Setor', 'Cidade', 'Estado', 'Funcionários', 'Participantes', 'Adesão %', 'PHQ-9 Médio', 'GAD-7 Médio', 'Risco Alto', 'Risco Médio', 'Risco Baixo', 'Status', 'Data Cadastro', 'Contato', 'Cargo']
+    const headers = ['ID', 'Nome', 'CNPJ', 'Email', 'Telefone', 'Cidade', 'Estado', 'Participantes', 'Status', 'Data Cadastro']
     
     const csvContent = [
       headers.join(';'),
-      ...empresasFiltradas.map(e => [
+      ...empresasFiltradas.map((e: any) => [
         e.id,
         e.nome,
         e.cnpj,
-        e.setor,
+        e.email,
+        e.telefone,
         e.cidade,
         e.estado,
-        e.funcionarios,
-        e.participantes,
-        e.adesao.toFixed(1),
-        e.phq9Medio.toFixed(1),
-        e.gad7Medio.toFixed(1),
-        e.riscoAlto,
-        e.riscoMedio,
-        e.riscoBaixo,
-        e.status,
-        e.dataCadastro,
-        e.contatoNome,
-        e.contatoCargo
+        e.totalParticipantes || 0,
+        e.ativo ? 'Ativo' : 'Inativo',
+        e.dataCriacao ? new Date(e.dataCriacao).toLocaleDateString('pt-BR') : ''
       ].join(';'))
     ].join('\n')
 
@@ -86,15 +95,24 @@ export default function ListaEmpresas() {
   }
 
   // Confirmar exclusão
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (empresaToDelete) {
-      deleteEmpresa(empresaToDelete.id)
-      showNotification({ 
-        message: `Empresa "${empresaToDelete.nomeCurto}" foi removida com sucesso.`, 
-        variant: 'success' 
-      })
-      setShowDeleteModal(false)
-      setEmpresaToDelete(null)
+      try {
+        await removerEmpresa(empresaToDelete.id)
+        showNotification({ 
+          message: `Empresa "${empresaToDelete.nome}" foi removida com sucesso.`, 
+          variant: 'success' 
+        })
+        refetch() // Recarrega a lista
+      } catch (error) {
+        showNotification({ 
+          message: 'Erro ao remover empresa. Tente novamente.', 
+          variant: 'danger' 
+        })
+      } finally {
+        setShowDeleteModal(false)
+        setEmpresaToDelete(null)
+      }
     }
   }
 
@@ -108,15 +126,43 @@ export default function ListaEmpresas() {
     router.push(`/adm/lista-participantes?empresa=${empresaId}`)
   }
 
-  // Calcular taxa de resposta
-  const calcularTaxaResposta = (participantes: number, funcionarios: number) => {
-    return Math.round((participantes / funcionarios) * 100)
-  }
-
   // Formatar data
   const formatarData = (dataString: string) => {
+    if (!dataString) return '-'
     const data = new Date(dataString)
     return data.toLocaleDateString('pt-BR')
+  }
+
+  // Loading state
+  if (loadingEmpresas) {
+    return (
+      <>
+        <PageTitle title="Lista de Empresas" subName="Administração" />
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+          <Spinner animation="border" variant="primary" />
+        </div>
+      </>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <>
+        <PageTitle title="Lista de Empresas" subName="Administração" />
+        <Card className="text-center py-5">
+          <Card.Body>
+            <IconifyIcon icon="iconoir:wifi-off" style={{ fontSize: '48px' }} className="text-danger mb-3" />
+            <h5>Erro ao carregar empresas</h5>
+            <p className="text-muted">{error.message}</p>
+            <Button variant="primary" onClick={refetch}>
+              <IconifyIcon icon="iconoir:refresh" className="me-2" />
+              Tentar novamente
+            </Button>
+          </Card.Body>
+        </Card>
+      </>
+    )
   }
 
   return (
@@ -177,21 +223,17 @@ export default function ListaEmpresas() {
       <Card className="mb-4 bg-light">
         <Card.Body>
           <div className="row text-center">
-            <div className="col-md-3">
+            <div className="col-md-4">
               <h4 className="mb-1">{empresas.length}</h4>
               <small className="text-muted">Total de Empresas</small>
             </div>
-            <div className="col-md-3">
-              <h4 className="mb-1">{empresas.reduce((acc, e) => acc + e.funcionarios, 0).toLocaleString()}</h4>
-              <small className="text-muted">Total de Funcionários</small>
+            <div className="col-md-4">
+              <h4 className="mb-1">{empresas.reduce((acc: number, e: any) => acc + (e.totalParticipantes || 0), 0).toLocaleString()}</h4>
+              <small className="text-muted">Total de Participantes</small>
             </div>
-            <div className="col-md-3">
-              <h4 className="mb-1">{empresas.reduce((acc, e) => acc + e.participantes, 0).toLocaleString()}</h4>
-              <small className="text-muted">Participantes Ativos</small>
-            </div>
-            <div className="col-md-3">
-              <h4 className="mb-1">{Math.round(empresas.reduce((acc, e) => acc + e.adesao, 0) / empresas.length)}%</h4>
-              <small className="text-muted">Taxa Média de Adesão</small>
+            <div className="col-md-4">
+              <h4 className="mb-1">{empresas.filter((e: any) => e.ativo).length}</h4>
+              <small className="text-muted">Empresas Ativas</small>
             </div>
           </div>
         </Card.Body>
@@ -205,20 +247,16 @@ export default function ListaEmpresas() {
               <thead className="table-light">
                 <tr>
                   <th>Empresa</th>
-                  <th className="text-center">Setor</th>
-                  <th className="text-center">Funcionários</th>
-                  <th className="text-center">Adesão</th>
-                  <th className="text-center">PHQ-9</th>
-                  <th className="text-center">GAD-7</th>
-                  <th className="text-center">Riscos</th>
+                  <th className="text-center">Localização</th>
+                  <th className="text-center">Contato</th>
+                  <th className="text-center">Participantes</th>
                   <th className="text-center">Status</th>
+                  <th className="text-center">Cadastro</th>
                   <th className="text-center">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {empresasPaginadas.map((empresa) => {
-                  const taxaResposta = calcularTaxaResposta(empresa.participantes, empresa.funcionarios)
-                  
+                {empresasPaginadas.map((empresa: any) => {
                   return (
                     <tr key={empresa.id}>
                       <td>
@@ -232,51 +270,40 @@ export default function ListaEmpresas() {
                               fontSize: '14px'
                             }}
                           >
-                            {empresa.nomeCurto.charAt(0)}
+                            {empresa.nome?.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="fw-bold">{empresa.nomeCurto}</div>
+                            <div className="fw-bold">{empresa.nome}</div>
                             <small className="text-muted">{empresa.cnpj}</small>
-                            <div className="small text-muted">
-                              <IconifyIcon icon="iconoir:map-pin" className="me-1" />
-                              {empresa.cidade}, {empresa.estado}
-                            </div>
                           </div>
                         </div>
                       </td>
                       <td className="text-center">
-                        <Badge bg="info" className="text-dark">{empresa.setor}</Badge>
-                      </td>
-                      <td className="text-center">
-                        <div className="fw-bold">{empresa.funcionarios.toLocaleString()}</div>
-                        <small className="text-muted">{empresa.participantes.toLocaleString()} ativos</small>
-                      </td>
-                      <td className="text-center">
-                        <Badge bg={taxaResposta >= 70 ? 'success' : taxaResposta >= 50 ? 'warning' : 'danger'}>
-                          {taxaResposta}%
-                        </Badge>
-                      </td>
-                      <td className="text-center">
-                        <Badge bg={empresa.phq9Medio >= 15 ? 'danger' : empresa.phq9Medio >= 10 ? 'warning' : 'success'}>
-                          {empresa.phq9Medio.toFixed(1)}
-                        </Badge>
-                      </td>
-                      <td className="text-center">
-                        <Badge bg={empresa.gad7Medio >= 15 ? 'danger' : empresa.gad7Medio >= 10 ? 'warning' : 'success'}>
-                          {empresa.gad7Medio.toFixed(1)}
-                        </Badge>
-                      </td>
-                      <td className="text-center">
-                        <div className="d-flex flex-column gap-1">
-                          <Badge bg="danger" className="small">Alto: {empresa.riscoAlto}</Badge>
-                          <Badge bg="warning" text="dark" className="small">Médio: {empresa.riscoMedio}</Badge>
-                          <Badge bg="success" className="small">Baixo: {empresa.riscoBaixo}</Badge>
+                        <div className="small">
+                          <IconifyIcon icon="iconoir:map-pin" className="me-1" />
+                          {empresa.cidade || '-'}{empresa.estado ? `, ${empresa.estado}` : ''}
                         </div>
                       </td>
                       <td className="text-center">
-                        <Badge bg={empresa.status === 'ativo' ? 'success' : 'secondary'}>
-                          {empresa.status === 'ativo' ? 'Ativa' : 'Inativa'}
+                        <div className="small">
+                          <div>{empresa.email}</div>
+                          <div className="text-muted">{empresa.telefone}</div>
+                        </div>
+                      </td>
+                      <td className="text-center">
+                        <Badge bg="info">
+                          {empresa.totalParticipantes || 0}
                         </Badge>
+                      </td>
+                      <td className="text-center">
+                        <Badge bg={empresa.ativo ? 'success' : 'secondary'}>
+                          {empresa.ativo ? 'Ativa' : 'Inativa'}
+                        </Badge>
+                      </td>
+                      <td className="text-center">
+                        <small className="text-muted">
+                          {formatarData(empresa.dataCriacao)}
+                        </small>
                       </td>
                       <td className="text-center">
                         <Button 
@@ -357,7 +384,7 @@ export default function ListaEmpresas() {
           <Modal.Title>Confirmar Exclusão</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p>Tem certeza que deseja excluir a empresa <strong>{empresaToDelete?.nomeCurto}</strong>?</p>
+          <p>Tem certeza que deseja excluir a empresa <strong>{empresaToDelete?.nome}</strong>?</p>
           <p className="text-muted small">Esta ação não pode ser desfeita. Todos os dados associados a esta empresa serão removidos.</p>
         </Modal.Body>
         <Modal.Footer>

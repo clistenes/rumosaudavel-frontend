@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Card, Table, Button, Badge, Form, InputGroup, Pagination, Modal, Row, Col } from 'react-bootstrap'
+import { Card, Table, Button, Badge, Form, InputGroup, Pagination, Modal, Row, Col, Spinner } from 'react-bootstrap'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
@@ -9,13 +9,31 @@ import PageTitle from '@/components/PageTitle'
 import { EMPRESAS_DEMO } from '@/assets/data/demo-data'
 import { useDemo } from '@/context/DemoContext'
 import { useNotificationContext } from '@/context/useNotificationContext'
+import { useParticipantes, useRemoverParticipante } from '@/hooks/api/useParticipantes'
+import { useEmpresas } from '@/hooks/api/useEmpresas'
+import { isDemoMode } from '@/utils/env'
 
 export default function ListaParticipantes() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const empresaFilter = searchParams.get('empresa')
   const { showNotification } = useNotificationContext()
-  const { participantes, deleteParticipante } = useDemo()
+  const demoMode = isDemoMode()
+  
+  // Hooks do modo DEMO
+  const demoContext = useDemo()
+  
+  // Hooks da API (modo Produção)
+  const { data: participantesData, loading: loadingParticipantes, error, refetch } = useParticipantes({ 
+    perPage: 100,
+    empresaId: empresaFilter ? parseInt(empresaFilter) : undefined 
+  })
+  const { mutateAsync: removerParticipante } = useRemoverParticipante()
+  const { data: empresasData } = useEmpresas({ perPage: 100 })
+  
+  // Dados (Demo ou API)
+  const participantes: any[] = demoMode ? demoContext.participantes : (participantesData?.data || [])
+  const empresas: any[] = demoMode ? EMPRESAS_DEMO : (empresasData?.data || [])
   
   const [busca, setBusca] = useState('')
   const [filtroEmpresa, setFiltroEmpresa] = useState<string>(empresaFilter || '')
@@ -27,18 +45,19 @@ export default function ListaParticipantes() {
 
   // Get empresa name by ID
   const getEmpresaNome = (empresaId: number) => {
-    const empresa = EMPRESAS_DEMO.find(e => e.id === empresaId)
-    return empresa?.nomeCurto || 'N/A'
+    const empresa = demoMode 
+      ? EMPRESAS_DEMO.find(e => e.id === empresaId)
+      : empresas.find((e: any) => e.id === empresaId)
+    return demoMode ? (empresa as any)?.nomeCurto || 'N/A' : (empresa as any)?.nome || 'N/A'
   }
 
   // Filtrar participantes
   const participantesFiltrados = useMemo(() => {
-    return participantes.filter(participante => {
-      const matchBusca = participante.nome.toLowerCase().includes(busca.toLowerCase()) ||
-                        participante.email.toLowerCase().includes(busca.toLowerCase()) ||
-                        participante.cpf.includes(busca) ||
-                        participante.cargo.toLowerCase().includes(busca.toLowerCase()) ||
-                        participante.departamento.toLowerCase().includes(busca.toLowerCase())
+    return participantes.filter((participante: any) => {
+      const matchBusca = !busca || 
+                        participante.nome?.toLowerCase().includes(busca.toLowerCase()) ||
+                        participante.email?.toLowerCase().includes(busca.toLowerCase()) ||
+                        participante.cpf?.includes(busca)
       const matchEmpresa = !filtroEmpresa || participante.empresaId === parseInt(filtroEmpresa)
       const matchRisco = !filtroRisco || participante.riscoSaude === filtroRisco
       return matchBusca && matchEmpresa && matchRisco
@@ -95,15 +114,28 @@ export default function ListaParticipantes() {
   }
 
   // Confirmar exclusão
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (participanteToDelete) {
-      deleteParticipante(participanteToDelete.id)
-      showNotification({ 
-        message: `Participante "${participanteToDelete.nome}" foi removido com sucesso.`, 
-        variant: 'success' 
-      })
-      setShowDeleteModal(false)
-      setParticipanteToDelete(null)
+      try {
+        if (demoMode) {
+          demoContext.deleteParticipante(participanteToDelete.id)
+        } else {
+          await removerParticipante(participanteToDelete.id)
+          refetch()
+        }
+        showNotification({ 
+          message: `Participante "${participanteToDelete.nome}" foi removido com sucesso.`, 
+          variant: 'success' 
+        })
+      } catch (error) {
+        showNotification({ 
+          message: 'Erro ao remover participante. Tente novamente.', 
+          variant: 'danger' 
+        })
+      } finally {
+        setShowDeleteModal(false)
+        setParticipanteToDelete(null)
+      }
     }
   }
 
@@ -121,8 +153,41 @@ export default function ListaParticipantes() {
 
   // Formatar data
   const formatarData = (dataString: string) => {
+    if (!dataString) return '-'
     const data = new Date(dataString)
     return data.toLocaleDateString('pt-BR')
+  }
+
+  // Loading state
+  if (!demoMode && loadingParticipantes) {
+    return (
+      <>
+        <PageTitle title="Lista de Participantes" subName="Administração" />
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+          <Spinner animation="border" variant="primary" />
+        </div>
+      </>
+    )
+  }
+
+  // Error state
+  if (!demoMode && error) {
+    return (
+      <>
+        <PageTitle title="Lista de Participantes" subName="Administração" />
+        <Card className="text-center py-5">
+          <Card.Body>
+            <IconifyIcon icon="iconoir:wifi-off" style={{ fontSize: '48px' }} className="text-danger mb-3" />
+            <h5>Erro ao carregar participantes</h5>
+            <p className="text-muted">{error.message}</p>
+            <Button variant="primary" onClick={refetch}>
+              <IconifyIcon icon="iconoir:refresh" className="me-2" />
+              Tentar novamente
+            </Button>
+          </Card.Body>
+        </Card>
+      </>
+    )
   }
 
   // Calcular idade
@@ -216,8 +281,10 @@ export default function ListaParticipantes() {
                 }}
               >
                 <option value="">Todas as empresas</option>
-                {EMPRESAS_DEMO.map(empresa => (
-                  <option key={empresa.id} value={empresa.id}>{empresa.nomeCurto}</option>
+                {empresas.map((empresa: any) => (
+                  <option key={empresa.id} value={empresa.id}>
+                    {demoMode ? empresa.nomeCurto : empresa.nome}
+                  </option>
                 ))}
               </Form.Select>
 
@@ -289,7 +356,7 @@ export default function ListaParticipantes() {
                               fontSize: '14px'
                             }}
                           >
-                            {participante.nome.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                            {participante.nome.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
                           </div>
                           <div>
                             <div className="fw-bold">{participante.nome}</div>
