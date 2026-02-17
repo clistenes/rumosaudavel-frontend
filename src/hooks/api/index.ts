@@ -23,3 +23,24 @@ export {
   useImportarParticipantesExcel,
   useImportarParticipantesTexto,
 } from './useParticipantes'
+
+export {
+  useProgramas,
+  usePrograma,
+  useCriarPrograma,
+  useAtualizarPrograma,
+  useRemoverPrograma,
+  useQuestionariosPrograma,
+  useVincularQuestionario,
+  useDesvincularQuestionario,
+} from './useProgramas'
+
+export {
+  useQuestionarios,
+  useQuestionario,
+  useCriarQuestionario,
+  useAtualizarQuestionario,
+  useRemoverQuestionario,
+  usePerguntasQuestionario,
+  useResponderQuestionario,
+} from './useQuestionarios'

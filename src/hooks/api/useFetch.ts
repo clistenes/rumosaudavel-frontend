@@ -33,13 +33,16 @@ export function useFetch<T>(
     setState(prev => ({ ...prev, loading: true, error: null }))
     
     try {
+      console.log('🌐 [useFetch] Iniciando requisição...')
       const response = await fetchFn()
+      console.log('🌐 [useFetch] Resposta:', response)
       setState({
         data: response.data,
         loading: false,
         error: null,
       })
     } catch (err) {
+      console.error('🌐 [useFetch] Erro:', err)
       setState({
         data: null,
         loading: false,

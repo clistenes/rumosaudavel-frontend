@@ -24,20 +24,27 @@ const useSignIn = () => {
         return
       }
 
+      // Converter para número para garantir comparação correta
+      const userType = Number(session.user.type)
+      console.log('🔄 [useSignIn] Redirecionando usuário tipo:', userType, typeof session.user.type)
+
       // Redirecionar baseado no tipo de usuário
-      switch (session.user.type) {
+      switch (userType) {
         case 1:
+          console.log('🔄 [useSignIn] Admin → /inicio')
           push('/inicio')
           break
         case 2:
+          console.log('🔄 [useSignIn] Participante → /participante')
           push('/participante')
           break
         case 3:
+          console.log('🔄 [useSignIn] Empresa → /empresa')
           push('/empresa')
           break
         default:
           // Permanece na página se tipo não reconhecido
-          console.error('Tipo de usuário não reconhecido:', session.user.type)
+          console.error('Tipo de usuário não reconhecido:', userType)
       }
     }
   }, [session, status, push, searchParams])

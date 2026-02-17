@@ -164,6 +164,11 @@ const demoUsers = [
 
 const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
+// Log de debug das variáveis de ambiente (aparecerá no console do servidor)
+console.log('🔧 [NextAuth] Configuração:')
+console.log('🔧 [NextAuth] DEMO_MODE:', isDemoMode)
+console.log('🔧 [NextAuth] API_URL:', process.env.NEXT_PUBLIC_API_URL)
+
 export const options: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -210,42 +215,93 @@ export const options: NextAuthOptions = {
 
         // Modo Produção - login via API Go
         try {
-          // Criar FormData para envio
-          const formData = new FormData()
-          formData.append('login', credentials.login)
-          formData.append('password', credentials.password)
-          console.log('Enviando login para API:', credentials.login)
+          // Criar URLSearchParams para envio (application/x-www-form-urlencoded)
+          const params = new URLSearchParams()
+          params.append('login', credentials.login)
+          params.append('password', credentials.password)
+          
+          const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/login`
+          console.log('🚀 [NextAuth] Tentando login na API:', apiUrl)
+          console.log('🚀 [NextAuth] Dados enviados:', params.toString())
+          
           const response = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/login`,
-            formData,
+            apiUrl,
+            params,
             {
               headers: {
-                'Content-Type': 'multipart/form-data',
+                'Content-Type': 'application/x-www-form-urlencoded',
               },
             }
           )
 
-          if (response.data.success && response.data.data) {
-            const user = response.data.data
-            return {
-              id: String(user.id),
-              name: user.name,
-              email: user.email,
-              login: user.login,
-              type: user.type,
-              id_empresa: user.id_empresa,
-              cadastrado: user.cadastrado,
-              termo_consentimento: user.termo_consentimento,
-              empresa: user.empresa,
-              token: response.data.data.token || '',
-            } as User
+          console.log('✅ [NextAuth] Resposta da API:', response.data)
+
+          // Verifica se retornou token (sucesso no login)
+          if (response.data.token) {
+            const { token, type } = response.data
+            console.log('✅ [NextAuth] Token recebido, tipo:', type)
+            
+            // Decodificar token JWT para extrair user_id
+            const tokenData = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
+            console.log('✅ [NextAuth] Dados do token:', tokenData)
+            
+            const userId = tokenData.user_id
+            const userType = parseInt(type)
+            const empresaId = tokenData.empresa_id
+            
+            // Buscar dados completos do usuário na API
+            try {
+              const userResponse = await axios.get(
+                `${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                  },
+                }
+              )
+              
+              const userData = userResponse.data
+              console.log('✅ [NextAuth] Dados do usuário:', userData)
+              
+              return {
+                id: String(userId),
+                name: userData.name || userData.nome || credentials.login,
+                email: userData.email || '',
+                login: credentials.login,
+                type: userType,
+                id_empresa: empresaId,
+                cadastrado: userData.cadastrado || 1,
+                termo_consentimento: userData.termo_consentimento || 1,
+                empresa: userData.empresa || null,
+                token: token,
+              } as User
+            } catch (userError) {
+              console.log('⚠️ [NextAuth] Não foi possível buscar dados do usuário, usando dados básicos')
+              // Se não conseguir buscar dados do usuário, retorna com dados básicos
+              return {
+                id: String(userId),
+                name: credentials.login,
+                email: '',
+                login: credentials.login,
+                type: userType,
+                id_empresa: empresaId,
+                cadastrado: 1,
+                termo_consentimento: 1,
+                empresa: undefined,
+                token: token,
+              } as unknown as User
+            }
           }
 
+          console.log('❌ [NextAuth] API não retornou token:', response.data)
           throw new Error(response.data.message || 'Credenciais inválidas')
         } catch (error) {
-          console.log('Erro ao fazer login:', error)  
+          console.error('❌ [NextAuth] Erro ao fazer login:', error)
+          
           if (axios.isAxiosError(error)) {
-            throw new Error(error.response?.data?.message || 'Erro ao fazer login')
+            console.error('❌ [NextAuth] Status:', error.response?.status)
+            console.error('❌ [NextAuth] Resposta da API:', error.response?.data)
+            throw new Error(error.response?.data?.message || `Erro ${error.response?.status}: ${error.response?.statusText}`)
           }
           throw error
         }
@@ -326,15 +382,26 @@ export const options: NextAuthOptions = {
           const { getSession } = await import('next-auth/react')
           const session = await getSession()
           
+          console.log('🔄 [NextAuth] Redirect - Sessão:', session?.user)
+          console.log('🔄 [NextAuth] Redirect - Tipo bruto:', session?.user?.type, typeof session?.user?.type)
+          
           if (session?.user?.type) {
-            switch (session.user.type) {
+            // Converter para número para garantir comparação correta
+            const userType = Number(session.user.type)
+            console.log('🔄 [NextAuth] Redirect - Tipo convertido:', userType)
+            
+            switch (userType) {
               case 1:
+                console.log('🔄 [NextAuth] Redirect - Admin → /inicio')
                 return `${baseUrl}/inicio`
               case 2:
+                console.log('🔄 [NextAuth] Redirect - Participante → /participante')
                 return `${baseUrl}/participante`
               case 3:
+                console.log('🔄 [NextAuth] Redirect - Empresa → /empresa')
                 return `${baseUrl}/empresa`
               default:
+                console.log('🔄 [NextAuth] Redirect - Tipo desconhecido:', userType)
                 return url
             }
           }

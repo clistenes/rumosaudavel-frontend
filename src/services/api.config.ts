@@ -9,7 +9,9 @@ const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 export const API_CONFIG = {
   // URL base da API
-  baseURL: isDemo ? '/api/demo' : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api',
+  // Em modo demo: usa /api/demo
+  // Em produção: usa /api/proxy para passar pelo proxy que adiciona o token do NextAuth
+  baseURL: isDemo ? '/api/demo' : '/api/proxy',
   
   // Headers padrão
   headers: {
