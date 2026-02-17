@@ -1731,8 +1731,8 @@ const [termoAceito, setTermoAceito] = useState(false);
 
 **Funcionalidades:**
 1. **Modo Participante (já logado):**
-   - Mostrar campos personalizados da empresa
-   - Campo senha atual (para troca na primeira vez)
+   - Mostrar campos personalizados da emprCesa
+   - ampo senha atual (para troca na primeira vez)
    - Email para recuperação
    - Checkbox de termo de consentimento
 

@@ -20,8 +20,8 @@ const getAuthToken = (): string | null => {
   return localStorage.getItem('token') || sessionStorage.getItem('token')
 }
 
-// Configura os headers da requisição
-const getHeaders = (customHeaders?: Record<string, string>): Record<string, string> => {
+// Configura os headers da requisição de forma síncrona (para compatibilidade)
+const getHeadersSync = (customHeaders?: Record<string, string>): Record<string, string> => {
   const headers: Record<string, string> = {
     ...API_CONFIG.headers,
     ...customHeaders,
@@ -73,7 +73,7 @@ async function request<T>(
   
   const config: RequestInit = {
     ...options,
-    headers: getHeaders(options.headers as Record<string, string>),
+    headers: getHeadersSync(options.headers as Record<string, string>),
   }
 
   try {

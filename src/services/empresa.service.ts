@@ -37,7 +37,39 @@ export const empresaService = {
     if (params.ordenarPor) queryString.append('ordenar_por', params.ordenarPor)
     if (params.ordem) queryString.append('ordem', params.ordem)
     
-    return http.get(`${API_ENDPOINTS.empresas.list}?${queryString.toString()}`)
+    const url = `${API_ENDPOINTS.empresas.list}?${queryString.toString()}`
+    console.log('🏢 [empresaService] Listando empresas:', url)
+    console.log('🏢 [empresaService] Parâmetros:', params)
+    
+    const response = await http.get<Empresa[] | Empresa>(url)
+    console.log('🏢 [empresaService] Resposta bruta:', response)
+    
+    // Adaptar resposta da API (pode ser array ou objeto único)
+    let empresasArray: Empresa[]
+    if (Array.isArray(response.data)) {
+      empresasArray = response.data
+    } else if (response.data) {
+      // Se for um objeto único, converte para array
+      empresasArray = [response.data]
+    } else {
+      empresasArray = []
+    }
+    
+    console.log('🏢 [empresaService] Empresas processadas:', empresasArray.length)
+    
+    // Retornar no formato esperado pelo frontend (PaginatedResponse)
+    return {
+      success: true,
+      data: {
+        data: empresasArray,
+        meta: {
+          current_page: 1,
+          last_page: 1,
+          per_page: empresasArray.length,
+          total: empresasArray.length,
+        }
+      }
+    } as unknown as ApiResponse<PaginatedResponse<Empresa>>
   },
 
   /**
