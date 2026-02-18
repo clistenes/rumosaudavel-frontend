@@ -6,13 +6,32 @@ import ComponentContainerCard from '@/components/ComponentContainerCard'
 import PageTitle from '@/components/PageTitle'
 import { Row, Col, Table, Form, Button, Badge } from 'react-bootstrap'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function DashboardAnalitico() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const empresaId = searchParams.get('empresa')
   const { empresas, participantes, questionarios, programas } = useDemo()
   const [filtroEmpresa, setFiltroEmpresa] = useState('')
   const [filtroPrograma, setFiltroPrograma] = useState('')
+
+  if (!empresaId) {
+    return (
+      <>
+        <PageTitle title='Dashboard Analítico' subName='Relatórios' />
+        <div className='alert alert-warning'>
+          Esta tela deve ser acessada pela lista de empresas.
+          <div className='mt-2'>
+            <Link href='/adm/lista-empresas'>
+              <Button variant='primary' size='sm'>Voltar para Lista de Empresas</Button>
+            </Link>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   // Filtrar dados
   const dadosFiltrados = useMemo(() => {

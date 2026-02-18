@@ -5,6 +5,8 @@ import ComponentContainerCard from '@/components/ComponentContainerCard'
 import PageTitle from '@/components/PageTitle'
 import { Row, Col, Table, Badge, Card, Button, Alert } from 'react-bootstrap'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 // Dados realistas do participante
 const dadosParticipante = {
@@ -50,7 +52,25 @@ const recomendacoes = [
 ]
 
 export default function RelatorioIndividual() {
+  const searchParams = useSearchParams()
+  const empresaId = searchParams.get('empresa')
   const [mostrarDetalhes, setMostrarDetalhes] = useState(false)
+
+  if (!empresaId) {
+    return (
+      <>
+        <PageTitle title='Relatório Individual' subName='Relatórios' />
+        <Alert variant='warning'>
+          Esta tela deve ser acessada pela lista de empresas.
+          <div className='mt-2'>
+            <Link href='/adm/lista-empresas'>
+              <Button variant='primary' size='sm'>Voltar para Lista de Empresas</Button>
+            </Link>
+          </div>
+        </Alert>
+      </>
+    )
+  }
 
   const getCorRisco = (risco: string) => {
     const cores: { [key: string]: string } = {

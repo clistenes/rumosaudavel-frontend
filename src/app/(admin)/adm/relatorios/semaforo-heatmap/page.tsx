@@ -5,6 +5,8 @@ import ComponentContainerCard from '@/components/ComponentContainerCard'
 import PageTitle from '@/components/PageTitle'
 import { Row, Col, Table, Form, Button, Badge } from 'react-bootstrap'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 // Dados para semáforo por dimensão
 const dadosSemaforo = [
@@ -70,7 +72,25 @@ const getCorCelula = (valor: number) => {
 }
 
 export default function RelatorioSemaforoHeatmap() {
+  const searchParams = useSearchParams()
+  const empresaId = searchParams.get('empresa')
   const [visualizacao, setVisualizacao] = useState<'semaforo' | 'heatmap'>('semaforo')
+
+  if (!empresaId) {
+    return (
+      <>
+        <PageTitle title='Relatório Semáforo e Heatmap' subName='Relatórios' />
+        <div className='alert alert-warning'>
+          Esta tela deve ser acessada pela lista de empresas.
+          <div className='mt-2'>
+            <Link href='/adm/lista-empresas'>
+              <Button variant='primary' size='sm'>Voltar para Lista de Empresas</Button>
+            </Link>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>

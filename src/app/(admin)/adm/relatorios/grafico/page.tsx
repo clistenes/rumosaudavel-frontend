@@ -5,6 +5,8 @@ import ComponentContainerCard from '@/components/ComponentContainerCard'
 import PageTitle from '@/components/PageTitle'
 import { Row, Col, Form, Button } from 'react-bootstrap'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 // Dados realistas para gráfico de pizza
 const dadosSatisfacaoGeral = {
@@ -155,9 +157,27 @@ const PizzaChart = ({ data, size = 200 }: { data: { [key: string]: number }; siz
 }
 
 export default function RelatorioGrafico() {
+  const searchParams = useSearchParams()
+  const empresaId = searchParams.get('empresa')
   const [dimensaoSelecionada, setDimensaoSelecionada] = useState<string>('')
 
   const dimensaoAtual = dadosPorDimensao.find(d => d.dimensao === dimensaoSelecionada) || dadosPorDimensao[0]
+
+  if (!empresaId) {
+    return (
+      <>
+        <PageTitle title='Relatório Gráfico (Pizza)' subName='Relatórios' />
+        <div className='alert alert-warning'>
+          Esta tela deve ser acessada pela lista de empresas.
+          <div className='mt-2'>
+            <Link href='/adm/lista-empresas'>
+              <Button variant='primary' size='sm'>Voltar para Lista de Empresas</Button>
+            </Link>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>

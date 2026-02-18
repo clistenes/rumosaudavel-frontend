@@ -5,6 +5,8 @@ import ComponentContainerCard from '@/components/ComponentContainerCard'
 import PageTitle from '@/components/PageTitle'
 import { Row, Col, Table, Form, Button, Badge } from 'react-bootstrap'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 // Dados realistas para termômetro
 const intervalosTermometro = [
@@ -136,6 +138,8 @@ const TermometroBarra = ({ valor }: { valor: number }) => {
 }
 
 export default function RelatorioTermometro() {
+  const searchParams = useSearchParams()
+  const empresaId = searchParams.get('empresa')
   const [filtroSetor, setFiltroSetor] = useState('')
 
   const participantesFiltrados = filtroSetor
@@ -154,6 +158,22 @@ export default function RelatorioTermometro() {
   const mediaPontuacao = Math.round(
     dadosParticipantes.reduce((acc, p) => acc + p.pontuacao, 0) / totalParticipantes
   )
+
+  if (!empresaId) {
+    return (
+      <>
+        <PageTitle title='Relatório Termômetro' subName='Relatórios' />
+        <div className='alert alert-warning'>
+          Esta tela deve ser acessada pela lista de empresas.
+          <div className='mt-2'>
+            <Link href='/adm/lista-empresas'>
+              <Button variant='primary' size='sm'>Voltar para Lista de Empresas</Button>
+            </Link>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
