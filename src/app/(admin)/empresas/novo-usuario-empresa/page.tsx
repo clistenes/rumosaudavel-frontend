@@ -1,257 +1,242 @@
-'use client'
+﻿'use client'
 
-import { useState } from 'react'
-import { Card, Button, Form, Row, Col, Alert, Table, Badge } from 'react-bootstrap'
+import { useMemo, useState } from 'react'
+import { Alert, Button, Col, Form, Row } from 'react-bootstrap'
 import Link from 'next/link'
-import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import ComponentContainerCard from '@/components/ComponentContainerCard'
+import IconifyIcon from '@/components/wrappers/IconifyIcon'
+import { useDemo } from '@/context/DemoContext'
+import { useNotificationContext } from '@/context/useNotificationContext'
 
-interface Empresa {
-  id: number
-  nome: string
+type ResultadoImportacao = {
+  criados: number
+  duplicados: string[]
+  total: number
 }
 
-const empresasDemo: Empresa[] = [
-  { id: 1, nome: 'TechCorp Brasil' },
-  { id: 2, nome: 'Inovação Ltda' },
-  { id: 3, nome: 'Saúde Corp' },
-]
+const normalizarLogin = (valor: string) => {
+  const bruto = valor.trim().toLowerCase()
+  if (!bruto) return ''
+  return bruto.includes('@') ? bruto.split('@')[0] : bruto
+}
+
+const nomePorLogin = (login: string) => {
+  return login
+    .replace(/[._-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
+    .join(' ')
+}
+
+const extrairLoginsTexto = (texto: string) => {
+  return texto
+    .split(/[,;\n]+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+}
 
 export default function NovoUsuarioEmpresaPage() {
-  const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    cpf: '',
-    telefone: '',
-    empresaId: '',
-    cargo: '',
-    departamento: '',
-    senha: '',
-    confirmarSenha: '',
-    tipoAcesso: 'gestor',
-  })
-  const [showSuccess, setShowSuccess] = useState(false)
+  const { empresas, participantes, addParticipante } = useDemo()
+  const { showNotification } = useNotificationContext()
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+  const [empresaId, setEmpresaId] = useState('')
+  const [loginsTexto, setLoginsTexto] = useState('')
+  const [arquivoExcel, setArquivoExcel] = useState<File | null>(null)
+  const [senha, setSenha] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const [resultado, setResultado] = useState<ResultadoImportacao | null>(null)
+
+  const empresaSelecionada = useMemo(
+    () => empresas.find((empresa: any) => String(empresa.id) === empresaId),
+    [empresas, empresaId]
+  )
+
+  const processarArquivo = async (arquivo: File): Promise<string[]> => {
+    const extensao = arquivo.name.split('.').pop()?.toLowerCase() || ''
+
+    if (!['csv', 'txt', 'xlsx', 'xls'].includes(extensao)) {
+      throw new Error('Formato invalido. Use CSV, TXT, XLSX ou XLS.')
+    }
+
+    if (extensao === 'xlsx' || extensao === 'xls') {
+      throw new Error('No modo demo, para processamento automatico use CSV/TXT.')
+    }
+
+    const conteudo = await arquivo.text()
+    return conteudo
+      .split(/\r?\n/)
+      .flatMap((linha) => linha.split(/[;,]/))
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+      .filter((item) => {
+        const valor = item.toLowerCase()
+        return valor !== 'login' && valor !== 'email'
+      })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setShowSuccess(true)
-    setTimeout(() => setShowSuccess(false), 3000)
+  const handleSalvar = async () => {
+    if (!empresaId) {
+      showNotification({ message: 'Selecione a empresa.', variant: 'warning' })
+      return
+    }
+
+    try {
+      setSalvando(true)
+
+      let logins = extrairLoginsTexto(loginsTexto)
+      if (arquivoExcel) {
+        const loginsArquivo = await processarArquivo(arquivoExcel)
+        logins = [...logins, ...loginsArquivo]
+      }
+
+      logins = Array.from(new Set(logins.map(normalizarLogin).filter(Boolean)))
+
+      if (logins.length === 0) {
+        showNotification({ message: 'Informe logins no texto ou envie arquivo.', variant: 'warning' })
+        return
+      }
+
+      const existentes = new Set(
+        participantes
+          .map((participante: any) => normalizarLogin(participante.login || participante.email || ''))
+          .filter(Boolean)
+      )
+
+      const duplicados: string[] = []
+      let criados = 0
+      const idEmpresa = Number(empresaId)
+      const dominioEmpresa =
+        empresaSelecionada?.email?.split('@')?.[1] ||
+        `${String(empresaSelecionada?.nome || 'empresa').toLowerCase().replace(/[^a-z0-9]+/g, '')}.com.br`
+
+      logins.forEach((login, index) => {
+        if (existentes.has(login)) {
+          duplicados.push(login)
+          return
+        }
+
+        existentes.add(login)
+        const sufixo = String(Date.now() + index).slice(-6)
+
+        addParticipante({
+          empresaId: idEmpresa,
+          login,
+          nome: nomePorLogin(login) || `Participante ${index + 1}`,
+          cpf: `000.000.${sufixo.slice(0, 3)}-${sufixo.slice(3)}`,
+          email: `${login}@${dominioEmpresa}`,
+          telefone: '',
+          cargo: 'Colaborador',
+          departamento: 'Geral',
+          dataNascimento: '1990-01-01',
+          dataAdmissao: new Date().toISOString().split('T')[0],
+          sexo: 'N/A',
+          estadoCivil: 'Nao informado',
+          cidade: empresaSelecionada?.cidade || '',
+          estado: empresaSelecionada?.estado || '',
+          status: 'ativo',
+          riscoSaude: 'baixo',
+          phq9Score: 0,
+          gad7Score: 0,
+          ultimaAvaliacao: '',
+          alertasPendentes: 0,
+          senha: senha.trim() || undefined,
+        })
+
+        criados += 1
+      })
+
+      const resumo = { criados, duplicados, total: logins.length }
+      setResultado(resumo)
+
+      showNotification({
+        message: `${criados} acesso(s) criado(s) com sucesso.`,
+        variant: criados > 0 ? 'success' : 'warning',
+      })
+    } catch (error) {
+      showNotification({
+        message: error instanceof Error ? error.message : 'Erro ao criar acessos.',
+        variant: 'danger',
+      })
+    } finally {
+      setSalvando(false)
+    }
   }
 
   return (
     <>
-      <PageTitle title="Novo Usuário Empresa" subName="Cadastrar gestor de empresa" />
+      <PageTitle title='Novo Acesso' subName='Cadastrar participantes em lote' />
 
-      {showSuccess && (
-        <Alert variant="success" dismissible onClose={() => setShowSuccess(false)} className="mb-4">
-          <IconifyIcon icon="fa:check-circle" className="me-2" />
-          Usuário criado com sucesso! Um e-mail foi enviado com as credenciais.
+      {resultado && (
+        <Alert variant='success' className='mb-4'>
+          <strong>Processamento concluido:</strong> {resultado.criados} criados, {resultado.duplicados.length} duplicados, {resultado.total} processados.
         </Alert>
       )}
 
       <Row>
-        <Col xl={8}>
-          <ComponentContainerCard title="Dados do Usuário">
-            <Form onSubmit={handleSubmit}>
-              <Row>
-                <Col md={6} className="mb-3">
-                  <Form.Label>Nome Completo <span className="text-danger">*</span></Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.nome}
-                    onChange={(e) => handleChange('nome', e.target.value)}
-                    placeholder="Nome do gestor"
-                    required
-                  />
-                </Col>
+        <Col xl={12}>
+          <ComponentContainerCard title='Novo Login'>
+            <Form>
+              <Form.Group className='mb-4'>
+                <Form.Label>Empresa</Form.Label>
+                <Form.Select
+                  value={empresaId}
+                  onChange={(event) => setEmpresaId(event.target.value)}
+                >
+                  <option value=''>digite o nome da empresa aqui</option>
+                  {empresas.map((empresa: any) => (
+                    <option key={empresa.id} value={empresa.id}>
+                      {empresa.nome}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
 
-                <Col md={6} className="mb-3">
-                  <Form.Label>E-mail <span className="text-danger">*</span></Form.Label>
-                  <Form.Control
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    placeholder="email@empresa.com"
-                    required
-                  />
-                </Col>
+              <Form.Group className='mb-4'>
+                <Form.Label>Logins</Form.Label>
+                <Form.Control
+                  as='textarea'
+                  rows={7}
+                  value={loginsTexto}
+                  onChange={(event) => setLoginsTexto(event.target.value)}
+                  placeholder='Adicione vários logins separando por ponto e vírgula'
+                />
+              </Form.Group>
 
-                <Col md={6} className="mb-3">
-                  <Form.Label>CPF <span className="text-danger">*</span></Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.cpf}
-                    onChange={(e) => handleChange('cpf', e.target.value)}
-                    placeholder="000.000.000-00"
-                    required
-                  />
-                </Col>
+              <Form.Group className='mb-4'>
+                <Form.Label>Importação através de uma planilha de excel:</Form.Label>
+                <Form.Control
+                  type='file'
+                  accept='.xlsx,.xls,.csv,.txt'
+                  onChange={(event) => {
+                    const input = event.target as HTMLInputElement
+                    setArquivoExcel(input.files?.[0] || null)
+                  }}
+                />
+              </Form.Group>
 
-                <Col md={6} className="mb-3">
-                  <Form.Label>Telefone</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.telefone}
-                    onChange={(e) => handleChange('telefone', e.target.value)}
-                    placeholder="(00) 00000-0000"
-                  />
-                </Col>
+              <Form.Group className='mb-4'>
+                <Form.Label>Senha</Form.Label>
+                <Form.Control
+                  type='text'
+                  value={senha}
+                  onChange={(event) => setSenha(event.target.value)}
+                  placeholder='Digite a primeira senha de acesso do usuário(s)'
+                />
+              </Form.Group>
 
-                <Col md={6} className="mb-3">
-                  <Form.Label>Empresa <span className="text-danger">*</span></Form.Label>
-                  <Form.Select
-                    value={formData.empresaId}
-                    onChange={(e) => handleChange('empresaId', e.target.value)}
-                    required
-                  >
-                    <option value="">Selecione uma empresa</option>
-                    {empresasDemo.map(e => (
-                      <option key={e.id} value={e.id}>{e.nome}</option>
-                    ))}
-                  </Form.Select>
-                </Col>
-
-                <Col md={6} className="mb-3">
-                  <Form.Label>Tipo de Acesso <span className="text-danger">*</span></Form.Label>
-                  <Form.Select
-                    value={formData.tipoAcesso}
-                    onChange={(e) => handleChange('tipoAcesso', e.target.value)}
-                    required
-                  >
-                    <option value="gestor">Gestor de Empresa</option>
-                    <option value="admin_empresa">Administrador da Empresa</option>
-                    <option value="rh">Recursos Humanos</option>
-                  </Form.Select>
-                </Col>
-
-                <Col md={6} className="mb-3">
-                  <Form.Label>Cargo</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.cargo}
-                    onChange={(e) => handleChange('cargo', e.target.value)}
-                    placeholder="Ex: Gerente de RH"
-                  />
-                </Col>
-
-                <Col md={6} className="mb-3">
-                  <Form.Label>Departamento</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.departamento}
-                    onChange={(e) => handleChange('departamento', e.target.value)}
-                    placeholder="Ex: Recursos Humanos"
-                  />
-                </Col>
-              </Row>
-
-              <hr className="my-4" />
-
-              <h6 className="mb-3">Configuração de Acesso</h6>
-
-              <Row>
-                <Col md={6} className="mb-3">
-                  <Form.Label>Senha <span className="text-danger">*</span></Form.Label>
-                  <Form.Control
-                    type="password"
-                    value={formData.senha}
-                    onChange={(e) => handleChange('senha', e.target.value)}
-                    placeholder="Mínimo 8 caracteres"
-                    required
-                  />
-                </Col>
-
-                <Col md={6} className="mb-3">
-                  <Form.Label>Confirmar Senha <span className="text-danger">*</span></Form.Label>
-                  <Form.Control
-                    type="password"
-                    value={formData.confirmarSenha}
-                    onChange={(e) => handleChange('confirmarSenha', e.target.value)}
-                    placeholder="Repita a senha"
-                    required
-                  />
-                </Col>
-              </Row>
-
-              <Form.Check
-                type="checkbox"
-                label="Enviar e-mail com credenciais de acesso"
-                className="mb-3"
-                defaultChecked
-              />
-
-              <div className="d-flex justify-content-end gap-2 mt-4">
-                <Link href="/empresas/dados-empresas" className="btn btn-secondary">
-                  Cancelar
+              <div className='d-flex justify-content-between align-items-center'>
+                <Link href='/empresas/pesquisar-usuario' className='btn btn-outline-secondary'>
+                  Voltar
                 </Link>
-                <Button type="submit" variant="primary">
-                  <IconifyIcon icon="fa:user-plus" className="me-1" />
-                  Criar Usuário
+                <Button type='button' variant='success' onClick={handleSalvar} disabled={salvando}>
+                  {salvando ? 'salvando...' : 'salvar'}
+                  <IconifyIcon icon='iconoir:floppy-disk' className='ms-2' />
                 </Button>
               </div>
             </Form>
           </ComponentContainerCard>
-        </Col>
-
-        <Col xl={4}>
-          <ComponentContainerCard title="Permissões por Perfil">
-            <Table size="sm" className="mb-0">
-              <thead>
-                <tr>
-                  <th>Perfil</th>
-                  <th>Acesso</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Gestor de Empresa</td>
-                  <td>
-                    <small>Visualizar relatórios da empresa, participantes, dashboards</small>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Admin Empresa</td>
-                  <td>
-                    <small>Gerenciar usuários, configurar programas, todos os relatórios</small>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Recursos Humanos</td>
-                  <td>
-                    <small>Cadastrar participantes, acompanhar avaliações, comunicações</small>
-                  </td>
-                </tr>
-              </tbody>
-            </Table>
-          </ComponentContainerCard>
-
-          <Card className="mt-3 bg-light">
-            <Card.Body>
-              <h6 className="mb-3">
-                <IconifyIcon icon="fa:shield-alt" className="me-2" />
-                Segurança
-              </h6>
-              <ul className="list-unstyled mb-0 small">
-                <li className="mb-2">
-                  <IconifyIcon icon="fa:check" className="text-success me-2" />
-                  Senha mínima de 8 caracteres
-                </li>
-                <li className="mb-2">
-                  <IconifyIcon icon="fa:check" className="text-success me-2" />
-                  Inclua letras e números
-                </li>
-                <li>
-                  <IconifyIcon icon="fa:check" className="text-success me-2" />
-                  Acesso restrito à empresa vinculada
-                </li>
-              </ul>
-            </Card.Body>
-          </Card>
         </Col>
       </Row>
     </>

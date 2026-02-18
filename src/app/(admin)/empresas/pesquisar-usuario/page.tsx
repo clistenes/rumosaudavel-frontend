@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { Card, Button, Form, Table, Badge, Row, Col, Pagination } from 'react-bootstrap'
@@ -19,8 +19,8 @@ interface Usuario {
 
 const usuariosDemo: Usuario[] = [
   { id: 1, nome: 'Carlos Silva', email: 'carlos@techcorp.com', empresa: 'TechCorp Brasil', perfil: 'Gestor', status: 'ativo', ultimoAcesso: 'Hoje, 10:30' },
-  { id: 2, nome: 'Maria Santos', email: 'maria@inovacao.com', empresa: 'Inovação Ltda', perfil: 'RH', status: 'ativo', ultimoAcesso: 'Ontem, 15:45' },
-  { id: 3, nome: 'João Pereira', email: 'joao@saudecorp.com', empresa: 'Saúde Corp', perfil: 'Admin', status: 'ativo', ultimoAcesso: 'Hoje, 09:15' },
+  { id: 2, nome: 'Maria Santos', email: 'maria@inovacao.com', empresa: 'InovaÃ§Ã£o Ltda', perfil: 'RH', status: 'ativo', ultimoAcesso: 'Ontem, 15:45' },
+  { id: 3, nome: 'JoÃ£o Pereira', email: 'joao@saudecorp.com', empresa: 'SaÃºde Corp', perfil: 'Admin', status: 'ativo', ultimoAcesso: 'Hoje, 09:15' },
   { id: 4, nome: 'Ana Costa', email: 'ana@empresaabc.com', empresa: 'Empresa ABC', perfil: 'Gestor', status: 'inativo', ultimoAcesso: '10/02/2026' },
   { id: 5, nome: 'Pedro Lima', email: 'pedro@grupoxyz.com', empresa: 'Grupo XYZ', perfil: 'RH', status: 'bloqueado', ultimoAcesso: '05/02/2026' },
 ]
@@ -51,14 +51,14 @@ export default function PesquisarUsuarioPage() {
 
   return (
     <>
-      <PageTitle title="Pesquisar Usuário" subName="Buscar e gerenciar usuários de empresas" />
+      <PageTitle title="Pesquisar UsuÃ¡rio" subName="Buscar e gerenciar usuÃ¡rios de empresas" />
 
       <Row className="mb-4">
         <Col xl={3} md={6}>
           <Card className="bg-primary text-white">
             <Card.Body className="d-flex justify-content-between align-items-center">
               <div>
-                <h6 className="mb-0">Total Usuários</h6>
+                <h6 className="mb-0">Total UsuÃ¡rios</h6>
                 <h3 className="mb-0">156</h3>
               </div>
               <IconifyIcon icon="fa:users" className="fs-1 opacity-50" />
@@ -114,8 +114,8 @@ export default function PesquisarUsuarioPage() {
             <Form.Select value={filtroEmpresa} onChange={(e) => setFiltroEmpresa(e.target.value)}>
               <option value="">Todas as empresas</option>
               <option value="TechCorp Brasil">TechCorp Brasil</option>
-              <option value="Inovação Ltda">Inovação Ltda</option>
-              <option value="Saúde Corp">Saúde Corp</option>
+              <option value="InovaÃ§Ã£o Ltda">InovaÃ§Ã£o Ltda</option>
+              <option value="SaÃºde Corp">SaÃºde Corp</option>
               <option value="Empresa ABC">Empresa ABC</option>
             </Form.Select>
           </Col>
@@ -138,7 +138,7 @@ export default function PesquisarUsuarioPage() {
           <Col lg={2} md={6} className="mb-3">
             <Link href="/empresas/novo-usuario-empresa" className="btn btn-primary w-100">
               <IconifyIcon icon="fa:plus" className="me-1" />
-              Novo Usuário
+              Novo Acesso
             </Link>
           </Col>
         </Row>
@@ -148,12 +148,12 @@ export default function PesquisarUsuarioPage() {
         <Table responsive className="mb-0">
           <thead>
             <tr>
-              <th>Usuário</th>
+              <th>UsuÃ¡rio</th>
               <th>Empresa</th>
               <th>Perfil</th>
               <th>Status</th>
-              <th>Último Acesso</th>
-              <th>Ações</th>
+              <th>Ãšltimo Acesso</th>
+              <th>AÃ§Ãµes</th>
             </tr>
           </thead>
           <tbody>
@@ -193,14 +193,14 @@ export default function PesquisarUsuarioPage() {
         {usuariosFiltrados.length === 0 && (
           <div className="text-center py-5">
             <IconifyIcon icon="fa:search" className="display-4 text-muted mb-3" />
-            <h5>Nenhum usuário encontrado</h5>
+            <h5>Nenhum usuÃ¡rio encontrado</h5>
             <p className="text-muted">Tente ajustar os filtros de pesquisa</p>
           </div>
         )}
 
         <div className="d-flex justify-content-between align-items-center mt-3">
           <small className="text-muted">
-            Mostrando {usuariosFiltrados.length} de {usuariosDemo.length} usuários
+            Mostrando {usuariosFiltrados.length} de {usuariosDemo.length} usuÃ¡rios
           </small>
           <Pagination size="sm">
             <Pagination.First />
@@ -216,3 +216,5 @@ export default function PesquisarUsuarioPage() {
     </>
   )
 }
+
+
