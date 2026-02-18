@@ -126,7 +126,12 @@ export default function AdicionarEmpresa() {
         }, 2000)
       } else {
         // Modo Produção - usa API
-        await criarEmpresa(empresaData)
+        await criarEmpresa({
+          empresa_nome: nome,
+          empresa_introducao: introducao,
+          empresa_cor: cor,
+          empresa_termo: termoConsentimento ? 'on' : 'off'
+        })
         showNotification({
           message: 'Empresa criada com sucesso!',
           variant: 'success'

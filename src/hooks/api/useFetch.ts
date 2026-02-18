@@ -5,7 +5,7 @@
  * const { data, loading, error, refetch } = useFetch(() => empresaService.listar())
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { ApiResponse } from '@/types/api'
 
 interface UseFetchState<T> {
@@ -29,12 +29,15 @@ export function useFetch<T>(
     error: null,
   })
 
+  const fetchFnRef = useRef(fetchFn)
+  fetchFnRef.current = fetchFn
+
   const fetchData = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true, error: null }))
     
     try {
       console.log('🌐 [useFetch] Iniciando requisição...')
-      const response = await fetchFn()
+      const response = await fetchFnRef.current()
       console.log('🌐 [useFetch] Resposta:', response)
       setState({
         data: response.data,
@@ -49,13 +52,13 @@ export function useFetch<T>(
         error: err instanceof Error ? err : new Error('Erro desconhecido'),
       })
     }
-  }, [fetchFn])
+  }, []) // Empty deps - fetchFnRef is stable
 
   useEffect(() => {
     if (immediate) {
       fetchData()
     }
-  }, [fetchData, immediate])
+  }, [immediate, fetchData])
 
   return {
     ...state,
@@ -147,10 +150,12 @@ export function usePaginatedFetch<T>(
 ): UsePaginatedFetchReturn<T> {
   const [page, setPage] = useState(1)
   const [meta, setMeta] = useState<ApiMeta | null>(null)
+  const fetchFnRef = useRef(fetchFn)
+  fetchFnRef.current = fetchFn
 
   const fetchWithPagination = useCallback(async (): Promise<ApiResponse<PaginatedResponse<T>>> => {
-    return fetchFn(page, perPage)
-  }, [fetchFn, page, perPage])
+    return fetchFnRef.current(page, perPage)
+  }, [page, perPage])
 
   const { data, loading, error, refetch } = useFetch(fetchWithPagination, true)
 

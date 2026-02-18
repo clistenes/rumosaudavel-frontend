@@ -5,12 +5,14 @@
 import { useCallback } from 'react'
 import { empresaService, type ListarEmpresasParams } from '@/services'
 import { useFetch, useMutation, usePaginatedFetch } from './useFetch'
+import type { UpdateEmpresaParams } from '@/types/empresa'
 
 // Hook para listar empresas
 export function useEmpresas(params: ListarEmpresasParams = {}) {
   const fetchFn = useCallback(() => empresaService.listar(params), [JSON.stringify(params)])
-  return usePaginatedFetch((page, perPage) => 
-    empresaService.listar({ ...params, page, perPage })
+  return usePaginatedFetch(
+    (page, perPage) => empresaService.listar({ ...params, page, perPage }),
+    params.perPage || 10
   )
 }
 
@@ -36,8 +38,8 @@ export function useCriarEmpresa() {
 
 // Hook para atualizar empresa
 export function useAtualizarEmpresa() {
-  return useMutation(({ id, data }: { id: number; data: Parameters<typeof empresaService.atualizar>[1] }) => 
-    empresaService.atualizar(id, data)
+  return useMutation((params: UpdateEmpresaParams) => 
+    empresaService.atualizar(params.id, params)
   )
 }
 

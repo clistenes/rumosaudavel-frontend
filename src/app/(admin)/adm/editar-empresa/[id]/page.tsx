@@ -23,9 +23,15 @@ export default function EditarEmpresa() {
   const { data: empresaData, loading: loadingEmpresa, error, refetch } = useEmpresa(demoMode ? null : empresaId)
   const { mutateAsync: atualizarEmpresa, loading: salvando } = useAtualizarEmpresa()
   
+  // Debug
+  console.log('🔍 [editar-empresa] empresaData:', empresaData)
+  
   // Buscar empresa do demo context
   const empresaDemo = demoMode ? demoContext.empresas.find((e: any) => e.id === empresaId) : null
-  const empresa = demoMode ? empresaDemo : (empresaData as any)?.data || empresaData
+  
+  // A API retorna objeto direto (não envelopado como na lista)
+  const empresaApi: any = empresaData
+  const empresa = demoMode ? empresaDemo : empresaApi
 
   const [activeTab, setActiveTab] = useState('dados')
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -81,7 +87,15 @@ export default function EditarEmpresa() {
         })
       } else {
         // Modo Produção
-        await atualizarEmpresa({ id: empresaId, data: dadosAtualizados })
+        await atualizarEmpresa({ 
+          id: empresaId, 
+          data: {
+            empresa_nome: nome,
+            empresa_introducao: introducao,
+            empresa_cor: cor,
+            empresa_termo: termoConsentimento ? 'on' : 'off'
+          } 
+        })
         showNotification({
           message: 'Empresa atualizada com sucesso!',
           variant: 'success'

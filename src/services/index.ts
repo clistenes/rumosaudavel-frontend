@@ -16,7 +16,13 @@ export { relatorioService } from './relatorio.service'
 export type { 
   ListarEmpresasParams 
 } from './empresa.service'
-export type { 
+export type {
+  Empresa,
+  EmpresaFormData,
+  CreateEmpresaParams,
+  UpdateEmpresaParams
+} from '@/types/empresa'
+export type {
   ListarParticipantesParams,
   CriarParticipanteData 
 } from './participante.service'
