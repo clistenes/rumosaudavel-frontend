@@ -141,7 +141,7 @@ export default function ListaParticipantes() {
 
   // Visualizar prontuário
   const handleViewProntuario = (participanteId: number) => {
-    router.push(`/adm/relatorios/prontuario/${participanteId}`)
+    router.push(`/adm/info-participante/${participanteId}`)
   }
 
   // Calcular tendência (simulada)

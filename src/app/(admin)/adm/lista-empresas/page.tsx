@@ -282,7 +282,7 @@ export default function ListaEmpresas() {
                         variant='outline-primary'
                         size='sm'
                         className='me-1'
-                        onClick={() => router.push(`/adm/editar-empresa/${empresa.id}`)}
+                        onClick={() => router.push(`/adm/editar-empresa/${empresa.id ?? empresa.empresa_id}`)}
                         title='Editar'
                       >
                         <IconifyIcon icon='iconoir:edit-pencil' />
@@ -295,6 +295,33 @@ export default function ListaEmpresas() {
                         title='Ver Participantes'
                       >
                         <IconifyIcon icon='iconoir:community' />
+                      </Button>
+                      <Button
+                        variant='outline-secondary'
+                        size='sm'
+                        className='me-1'
+                        onClick={() => router.push(`/adm/dashboard-analytics?empresa=${empresa.id}`)}
+                        title='Analytics da Empresa'
+                      >
+                        <IconifyIcon icon='iconoir:graph-up' />
+                      </Button>
+                      <Button
+                        variant='outline-secondary'
+                        size='sm'
+                        className='me-1'
+                        onClick={() => router.push(`/adm/notificacoes?empresa=${empresa.id}`)}
+                        title='Notificacoes da Empresa'
+                      >
+                        <IconifyIcon icon='iconoir:bell' />
+                      </Button>
+                      <Button
+                        variant='outline-secondary'
+                        size='sm'
+                        className='me-1'
+                        onClick={() => router.push(`/adm/relatorios/analitico?empresa=${empresa.id}`)}
+                        title='Relatorios da Empresa'
+                      >
+                        <IconifyIcon icon='iconoir:stats-report' />
                       </Button>
                       <Button
                         variant='outline-danger'
