@@ -87,7 +87,10 @@ export default function AdicionarEmpresa() {
 
   const handleSalvar = async () => {
     if (!nome.trim()) {
-      alert('O nome da empresa é obrigatório!')
+      showNotification({
+        message: 'O nome da empresa é obrigatório.',
+        variant: 'warning'
+      })
       return
     }
 
@@ -115,10 +118,15 @@ export default function AdicionarEmpresa() {
         demoContext.addEmpresa({
           ...empresaData,
           nomeCurto: nome,
-          slug,
+          slug: slug || handleGerarSlug(nome),
           introducao,
           cor,
-          termoConsentimento
+          termoConsentimento,
+          status: 'ativo'
+        })
+        showNotification({
+          message: 'Empresa criada com sucesso!',
+          variant: 'success'
         })
         setSucesso(true)
         setTimeout(() => {

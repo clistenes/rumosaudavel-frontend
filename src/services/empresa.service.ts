@@ -9,6 +9,7 @@ import type {
   Empresa,
   Participante 
 } from '@/types/api'
+import type { CreateEmpresaParams, UpdateEmpresaParams } from '@/types/empresa'
 
 export interface ListarEmpresasParams {
   page?: number
@@ -20,6 +21,8 @@ export interface ListarEmpresasParams {
   ordenarPor?: string
   ordem?: 'asc' | 'desc'
 }
+
+const isDemoMode = () => process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 export const empresaService = {
   /**
@@ -41,63 +44,149 @@ export const empresaService = {
     console.log('🏢 [empresaService] Listando empresas:', url)
     console.log('🏢 [empresaService] Parâmetros:', params)
     
-    const response = await http.get<Empresa[] | Empresa>(url)
-    console.log('🏢 [empresaService] Resposta bruta:', response)
-    
-    // Adaptar resposta da API (pode ser array ou objeto único)
-    let empresasArray: Empresa[]
-    if (Array.isArray(response.data)) {
-      empresasArray = response.data
-    } else if (response.data) {
-      // Se for um objeto único, converte para array
-      empresasArray = [response.data]
-    } else {
-      empresasArray = []
-    }
-    
-    console.log('🏢 [empresaService] Empresas processadas:', empresasArray.length)
-    
-    // Retornar no formato esperado pelo frontend (PaginatedResponse)
-    return {
-      success: true,
-      data: {
-        data: empresasArray,
-        meta: {
-          current_page: 1,
-          last_page: 1,
-          per_page: empresasArray.length,
-          total: empresasArray.length,
-        }
+    try {
+      const response = await http.get<Empresa[]>(url)
+      console.log('🏢 [empresaService] Resposta bruta:', response)
+      
+      // O proxy pode retornar array direto ou envelopado
+      let empresasArray: Empresa[] = []
+      
+      // Verificar se response é array direto (do proxy)
+      if (Array.isArray(response)) {
+        empresasArray = response
+        console.log('🏢 [empresaService] Response é array direto:', empresasArray.length)
+      } 
+      // Verificar se response.data é array
+      else if (Array.isArray(response.data)) {
+        empresasArray = response.data
+      } 
+      // Verificar se response.data é objeto envelopado { data: [] }
+      else if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+        empresasArray = (response.data as any).data
+      } 
+      // Verificar se é objeto único
+      else if (response.data && typeof response.data === 'object') {
+        empresasArray = [response.data as Empresa]
       }
-    } as unknown as ApiResponse<PaginatedResponse<Empresa>>
+      
+      console.log('🏢 [empresaService] Empresas processadas:', empresasArray.length)
+      
+      // Retornar no formato esperado pelo frontend (PaginatedResponse)
+      return {
+        success: true,
+        data: {
+          data: empresasArray,
+          meta: {
+            page: 1,
+            perPage: empresasArray.length,
+            total: empresasArray.length,
+            totalPages: 1,
+          }
+        }
+      } as unknown as ApiResponse<PaginatedResponse<Empresa>>
+    } catch (error) {
+      console.error('🏢 [empresaService] Erro ao listar empresas:', error)
+      // Retornar array vazio em caso de erro
+      return {
+        success: false,
+        data: {
+          data: [],
+          meta: {
+            page: 1,
+            perPage: 0,
+            total: 0,
+            totalPages: 0,
+          }
+        },
+        message: 'Erro ao carregar empresas'
+      } as unknown as ApiResponse<PaginatedResponse<Empresa>>
+    }
   },
 
   /**
    * Busca uma empresa por ID
    */
   async buscarPorId(id: number): Promise<ApiResponse<Empresa>> {
-    return http.get(API_ENDPOINTS.empresas.get(id))
+    try {
+      const response = await http.get<Empresa>(`/empresas/${id}`)
+      
+      // O proxy retorna array direto ou objeto direto
+      let empresa: Empresa | null = null
+      
+      if (Array.isArray(response)) {
+        // Se for array, pega o primeiro
+        empresa = response[0] || null
+      } else if (response.data) {
+        // Se tiver response.data
+        empresa = response.data
+      } else {
+        // Se for objeto direto
+        empresa = response as unknown as Empresa
+      }
+      
+      return {
+        success: true,
+        data: empresa
+      } as unknown as ApiResponse<Empresa>
+    } catch (error) {
+      return {
+        success: false,
+        data: null as any,
+        message: 'Empresa não encontrada'
+      } as unknown as ApiResponse<Empresa>
+    }
   },
 
   /**
-   * Cria uma nova empresa
+   * Cria uma nova empresa (multipart/form-data)
    */
-  async criar(data: Omit<Empresa, 'id' | 'dataCriacao' | 'totalParticipantes'>): Promise<ApiResponse<Empresa>> {
-    return http.post(API_ENDPOINTS.empresas.create, data)
+  async criar(data: CreateEmpresaParams): Promise<ApiResponse<Empresa>> {
+    const formData = new FormData()
+    formData.append('empresa_nome', data.empresa_nome)
+    if (data.empresa_introducao) {
+      formData.append('empresa_introducao', data.empresa_introducao)
+    }
+    formData.append('empresa_cor', data.empresa_cor)
+    if (data.empresa_termo) {
+      formData.append('empresa_termo', String(data.empresa_termo))
+    }
+    if (data.empresa_logo) {
+      formData.append('empresa_logo', data.empresa_logo)
+    }
+
+    return http.post(API_ENDPOINTS.empresas.create, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
   },
 
   /**
-   * Atualiza uma empresa
+   * Atualiza uma empresa (multipart/form-data)
    */
-  async atualizar(id: number, data: Partial<Empresa>): Promise<ApiResponse<Empresa>> {
-    return http.put(API_ENDPOINTS.empresas.update(id), data)
+  async atualizar(id: number, params: UpdateEmpresaParams): Promise<ApiResponse<Empresa>> {
+    const data = params.data
+    const formData = new FormData()
+    formData.append('empresa_nome', data.empresa_nome)
+    if (data.empresa_introducao) {
+      formData.append('empresa_introducao', data.empresa_introducao)
+    }
+    formData.append('empresa_cor', data.empresa_cor)
+    if (data.empresa_termo) {
+      formData.append('empresa_termo', String(data.empresa_termo))
+    }
+    if (data.empresa_logo) {
+      formData.append('empresa_logo', data.empresa_logo)
+    }
+
+    return http.post(`/empresas/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
   },
 
   /**
    * Remove uma empresa
    */
   async remover(id: number): Promise<ApiResponse<void>> {
-    return http.delete(API_ENDPOINTS.empresas.delete(id))
+    return http.delete(`/empresas/${id}`)
   },
 
   /**

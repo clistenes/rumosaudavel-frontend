@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, Form, Button, Row, Col, Tabs, Tab, Alert, Badge, Table, Spinner } from 'react-bootstrap'
-import { useRouter, useParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { Alert, Badge, Button, Card, Col, Form, Row, Spinner, Tab, Table, Tabs } from 'react-bootstrap'
+import { useParams, useRouter } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import ColorPicker from '@/components/ColorPicker'
 import { useDemo } from '@/context/DemoContext'
-import { useEmpresa, useAtualizarEmpresa } from '@/hooks/api/useEmpresas'
+import { useEmpresa, useAtualizarEmpresa, useRemoverEmpresa } from '@/hooks/api/useEmpresas'
 import { useNotificationContext } from '@/context/useNotificationContext'
 import { isDemoMode } from '@/utils/env'
 
@@ -18,126 +18,123 @@ export default function EditarEmpresa() {
   const { showNotification } = useNotificationContext()
   const demoMode = isDemoMode()
   const demoContext = useDemo()
-  
-  // Hooks da API
+
   const { data: empresaData, loading: loadingEmpresa, error, refetch } = useEmpresa(demoMode ? null : empresaId)
   const { mutateAsync: atualizarEmpresa, loading: salvando } = useAtualizarEmpresa()
-  
-  // Debug
-  console.log('🔍 [editar-empresa] empresaData:', empresaData)
-  
-  // Buscar empresa do demo context
+  const { mutateAsync: removerEmpresa, loading: removendo } = useRemoverEmpresa()
+
   const empresaDemo = demoMode ? demoContext.empresas.find((e: any) => e.id === empresaId) : null
-  
-  // A API retorna objeto direto (não envelopado como na lista)
   const empresaApi: any = empresaData
   const empresa = demoMode ? empresaDemo : empresaApi
 
   const [activeTab, setActiveTab] = useState('dados')
-  const [showLoginModal, setShowLoginModal] = useState(false)
-
-  // Dados da empresa
   const [nome, setNome] = useState('')
   const [slug, setSlug] = useState('')
   const [introducao, setIntroducao] = useState('')
   const [cor, setCor] = useState('#FF6600')
   const [termoConsentimento, setTermoConsentimento] = useState(true)
-  const [status, setStatus] = useState('ativa')
+  const [status, setStatus] = useState('ativo')
 
-  // Dados do login da empresa
   const [loginEmpresa, setLoginEmpresa] = useState('')
   const [senhaEmpresa, setSenhaEmpresa] = useState('')
   const [emailEmpresa, setEmailEmpresa] = useState('')
   const [acessaDashboard, setAcessaDashboard] = useState(true)
   const [acessaRelatorios, setAcessaRelatorios] = useState(true)
 
-  // Configurações de dashboard
   const [filtroHeatmap1, setFiltroHeatmap1] = useState('')
   const [filtroHeatmap2, setFiltroHeatmap2] = useState('')
 
-  // Carregar dados da empresa
   useEffect(() => {
-    if (empresa) {
-      setNome(empresa.nome || '')
-      setSlug(empresa.slug || '')
-      setIntroducao(empresa.introducao || '')
-      setCor(empresa.cor || '#FF6600')
-      setTermoConsentimento(empresa.termoConsentimento || true)
-      setStatus(empresa.status || 'ativa')
-    }
+    if (!empresa) return
+
+    setNome(empresa.nome || '')
+    setSlug(empresa.slug || '')
+    setIntroducao(empresa.introducao || '')
+    setCor(empresa.cor || '#FF6600')
+    setTermoConsentimento(empresa.termoConsentimento ?? true)
+    setStatus(empresa.status || (empresa.ativo ? 'ativo' : 'inativo'))
   }, [empresa])
 
   const handleSalvar = async () => {
     try {
-      const dadosAtualizados = {
-        nome,
-        slug,
-        introducao,
-        cor,
-        termoConsentimento,
-        status
+      if (demoMode) {
+        demoContext.updateEmpresa(empresaId, {
+          nome,
+          slug,
+          introducao,
+          cor,
+          termoConsentimento,
+          status,
+          ativo: status === 'ativo',
+        })
+        showNotification({ message: 'Empresa atualizada com sucesso!', variant: 'success' })
+        return
       }
 
-      if (demoMode) {
-        // Modo Demo
-        demoContext.updateEmpresa(empresaId, dadosAtualizados)
-        showNotification({
-          message: 'Empresa atualizada com sucesso!',
-          variant: 'success'
-        })
-      } else {
-        // Modo Produção
-        await atualizarEmpresa({ 
-          id: empresaId, 
-          data: {
-            empresa_nome: nome,
-            empresa_introducao: introducao,
-            empresa_cor: cor,
-            empresa_termo: termoConsentimento ? 'on' : 'off'
-          } 
-        })
-        showNotification({
-          message: 'Empresa atualizada com sucesso!',
-          variant: 'success'
-        })
-        refetch()
-      }
-    } catch (error) {
-      showNotification({
-        message: 'Erro ao atualizar empresa. Tente novamente.',
-        variant: 'danger'
+      await atualizarEmpresa({
+        id: empresaId,
+        data: {
+          empresa_nome: nome,
+          empresa_introducao: introducao,
+          empresa_cor: cor,
+          empresa_termo: termoConsentimento ? 'on' : 'off',
+        }
       })
+
+      showNotification({ message: 'Empresa atualizada com sucesso!', variant: 'success' })
+      refetch()
+    } catch {
+      showNotification({ message: 'Erro ao atualizar empresa. Tente novamente.', variant: 'danger' })
     }
   }
 
-  const handleCriarLogin = () => {
-    setShowLoginModal(true)
+  const handleExcluir = async () => {
+    const confirmed = window.confirm(`Tem certeza que deseja excluir a empresa "${empresa?.nome}"?`)
+    if (!confirmed) return
+
+    try {
+      if (demoMode) {
+        demoContext.deleteEmpresa(empresaId)
+      } else {
+        await removerEmpresa(empresaId)
+      }
+
+      showNotification({ message: 'Empresa excluída com sucesso!', variant: 'success' })
+      router.push('/adm/lista-empresas')
+    } catch {
+      showNotification({ message: 'Erro ao excluir empresa. Tente novamente.', variant: 'danger' })
+    }
   }
 
-  // Loading state
-  if (loadingEmpresa) {
+  const handleSalvarLogin = () => {
+    showNotification({
+      message: loginEmpresa ? 'Login da empresa atualizado.' : 'Preencha o login para salvar.',
+      variant: loginEmpresa ? 'success' : 'warning'
+    })
+  }
+
+  if (!demoMode && loadingEmpresa) {
     return (
       <>
-        <PageTitle title="Editar Empresa" subName="Empresas" />
-        <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
-          <Spinner animation="border" variant="primary" />
+        <PageTitle title='Editar Empresa' subName='Empresas' />
+        <div className='d-flex justify-content-center align-items-center' style={{ height: '400px' }}>
+          <Spinner animation='border' variant='primary' />
         </div>
       </>
     )
   }
 
-  // Error state
-  if (error) {
+  if (!demoMode && error) {
     return (
       <>
-        <PageTitle title="Editar Empresa" subName="Empresas" />
-        <Card className="text-center py-5">
+        <PageTitle title='Editar Empresa' subName='Empresas' />
+        <Card className='text-center py-5'>
           <Card.Body>
-            <IconifyIcon icon="iconoir:wifi-off" style={{ fontSize: '48px' }} className="text-danger mb-3" />
+            <IconifyIcon icon='iconoir:wifi-off' style={{ fontSize: '48px' }} className='text-danger mb-3' />
             <h5>Erro ao carregar empresa</h5>
-            <p className="text-muted">{error.message}</p>
-            <Button variant="primary" onClick={refetch}>
-              <IconifyIcon icon="iconoir:refresh" className="me-2" />
+            <p className='text-muted'>{error.message}</p>
+            <Button variant='primary' onClick={refetch}>
+              <IconifyIcon icon='iconoir:refresh' className='me-2' />
               Tentar novamente
             </Button>
           </Card.Body>
@@ -146,99 +143,88 @@ export default function EditarEmpresa() {
     )
   }
 
+  if (!empresa) {
+    return (
+      <>
+        <PageTitle title='Editar Empresa' subName='Empresas' />
+        <Alert variant='warning'>Empresa não encontrada.</Alert>
+      </>
+    )
+  }
+
   return (
     <>
-      <PageTitle title="Editar Empresa" subName="Empresas" />
+      <PageTitle title='Editar Empresa' subName='Empresas' />
 
-      <Tabs
-        activeKey={activeTab}
-        onSelect={(k) => setActiveTab(k || 'dados')}
-        className="mb-4"
-      >
-        <Tab eventKey="dados" title="Dados Gerais">
+      <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k || 'dados')} className='mb-4'>
+        <Tab eventKey='dados' title='Dados Gerais'>
           <Card>
             <Card.Body>
               <Row>
                 <Col md={8}>
-                  <Form.Group className="mb-3">
+                  <Form.Group className='mb-3'>
                     <Form.Label>Nome da Empresa</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value)}
-                    />
+                    <Form.Control type='text' value={nome} onChange={(e) => setNome(e.target.value)} />
                   </Form.Group>
 
-                  <Form.Group className="mb-3">
+                  <Form.Group className='mb-3'>
                     <Form.Label>Slug (URL)</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={slug}
-                      onChange={(e) => setSlug(e.target.value)}
-                      disabled
-                    />
-                    <Form.Text className="text-muted">
-                      URL: https://rumosaudavel.com/portal/{slug}
-                    </Form.Text>
+                    <Form.Control type='text' value={slug} onChange={(e) => setSlug(e.target.value)} />
+                    <Form.Text className='text-muted'>URL: https://rumosaudavel.com/portal/{slug}</Form.Text>
                   </Form.Group>
 
-                  <Form.Group className="mb-3">
+                  <Form.Group className='mb-3'>
                     <Form.Label>Introdução</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={4}
-                      value={introducao}
-                      onChange={(e) => setIntroducao(e.target.value)}
-                    />
+                    <Form.Control as='textarea' rows={4} value={introducao} onChange={(e) => setIntroducao(e.target.value)} />
                   </Form.Group>
 
                   <Row>
                     <Col md={6}>
-                      <Form.Group className="mb-3">
+                      <Form.Group className='mb-3'>
                         <Form.Label>Cor do Tema</Form.Label>
                         <ColorPicker value={cor} onChange={setCor} />
                       </Form.Group>
                     </Col>
                     <Col md={6}>
-                      <Form.Group className="mb-3">
+                      <Form.Group className='mb-3'>
                         <Form.Label>Status</Form.Label>
                         <Form.Select value={status} onChange={(e) => setStatus(e.target.value)}>
-                          <option value="ativa">Ativa</option>
-                          <option value="inativa">Inativa</option>
+                          <option value='ativo'>Ativa</option>
+                          <option value='inativo'>Inativa</option>
                         </Form.Select>
                       </Form.Group>
                     </Col>
                   </Row>
 
                   <Form.Check
-                    type="switch"
-                    id="termo-consentimento"
-                    label="Exigir Termo de Consentimento"
+                    type='switch'
+                    id='termo-consentimento'
+                    label='Exigir Termo de Consentimento'
                     checked={termoConsentimento}
                     onChange={(e) => setTermoConsentimento(e.target.checked)}
-                    className="mb-3"
+                    className='mb-3'
                   />
                 </Col>
 
                 <Col md={4}>
-                  <Card className="bg-light">
+                  <Card className='bg-light'>
                     <Card.Body>
                       <h6>Estatísticas</h6>
-                      <div className="mb-2">
-                        <small className="text-muted">Total de Participantes:</small>
-                        <div className="fs-4 fw-bold">150</div>
+                      <div className='mb-2'>
+                        <small className='text-muted'>Total de Participantes:</small>
+                        <div className='fs-4 fw-bold'>{empresa.participantes || 0}</div>
                       </div>
-                      <div className="mb-2">
-                        <small className="text-muted">Responderam:</small>
-                        <div className="fs-4 fw-bold text-success">98</div>
+                      <div className='mb-2'>
+                        <small className='text-muted'>Risco Alto:</small>
+                        <div className='fs-4 fw-bold text-danger'>{empresa.riscoAlto || 0}</div>
                       </div>
-                      <div className="mb-2">
-                        <small className="text-muted">Taxa de Resposta:</small>
-                        <div className="fs-4 fw-bold text-info">65%</div>
+                      <div className='mb-2'>
+                        <small className='text-muted'>Taxa de Adesão:</small>
+                        <div className='fs-4 fw-bold text-info'>{empresa.adesao || 0}%</div>
                       </div>
-                      <div className="mb-0">
-                        <small className="text-muted">Cadastrado em:</small>
-                        <div>15/01/2025</div>
+                      <div className='mb-0'>
+                        <small className='text-muted'>Cadastrado em:</small>
+                        <div>{empresa.dataCadastro ? new Date(empresa.dataCadastro).toLocaleDateString('pt-BR') : '-'}</div>
                       </div>
                     </Card.Body>
                   </Card>
@@ -248,32 +234,26 @@ export default function EditarEmpresa() {
           </Card>
         </Tab>
 
-        <Tab eventKey="campos" title="Campos">
+        <Tab eventKey='campos' title='Campos'>
           <Card>
             <Card.Body>
-              <h6 className="mb-3">Campos Padrão do Cadastro</h6>
-              <Row className="mb-4">
+              <h6 className='mb-3'>Campos Padrão do Cadastro</h6>
+              <Row className='mb-4'>
                 {['Nome', 'Email', 'Celular', 'Faixa Etária', 'Sexo', 'Estado Civil'].map((campo) => (
-                  <Col md={4} key={campo} className="mb-2">
-                    <Form.Check
-                      type="checkbox"
-                      id={`campo-${campo}`}
-                      label={campo}
-                      defaultChecked={['Nome', 'Email', 'Celular'].includes(campo)}
-                    />
+                  <Col md={4} key={campo} className='mb-2'>
+                    <Form.Check type='checkbox' id={`campo-${campo}`} label={campo} defaultChecked={['Nome', 'Email', 'Celular'].includes(campo)} />
                   </Col>
                 ))}
               </Row>
 
               <hr />
-
-              <h6 className="mb-3">Campos Personalizados</h6>
-              <Alert variant="info">
-                <IconifyIcon icon="iconoir:info-circle" className="me-2" />
-                Gerencie campos adicionais no cadastro dos participantes
+              <h6 className='mb-3'>Campos Personalizados</h6>
+              <Alert variant='info'>
+                <IconifyIcon icon='iconoir:info-circle' className='me-2' />
+                Gerencie campos adicionais no cadastro dos participantes.
               </Alert>
-              
-              <Table size="sm">
+
+              <Table size='sm'>
                 <thead>
                   <tr>
                     <th>Campo</th>
@@ -284,26 +264,10 @@ export default function EditarEmpresa() {
                 <tbody>
                   <tr>
                     <td>Setor</td>
-                    <td><Badge bg="secondary">Múltipla Escolha</Badge></td>
+                    <td><Badge bg='secondary'>Múltipla Escolha</Badge></td>
                     <td>
-                      <Button variant="outline-primary" size="sm" className="me-1">
-                        <IconifyIcon icon="iconoir:edit-pencil" />
-                      </Button>
-                      <Button variant="outline-danger" size="sm">
-                        <IconifyIcon icon="iconoir:trash" />
-                      </Button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Cargo</td>
-                    <td><Badge bg="secondary">Texto</Badge></td>
-                    <td>
-                      <Button variant="outline-primary" size="sm" className="me-1">
-                        <IconifyIcon icon="iconoir:edit-pencil" />
-                      </Button>
-                      <Button variant="outline-danger" size="sm">
-                        <IconifyIcon icon="iconoir:trash" />
-                      </Button>
+                      <Button variant='outline-primary' size='sm' className='me-1'><IconifyIcon icon='iconoir:edit-pencil' /></Button>
+                      <Button variant='outline-danger' size='sm'><IconifyIcon icon='iconoir:trash' /></Button>
                     </td>
                   </tr>
                 </tbody>
@@ -312,115 +276,68 @@ export default function EditarEmpresa() {
           </Card>
         </Tab>
 
-        <Tab eventKey="login" title="Login da Empresa">
+        <Tab eventKey='login' title='Login da Empresa'>
           <Card>
             <Card.Body>
-              <h6 className="mb-3">Acesso ao Dashboard da Empresa</h6>
-              
-              <Alert variant="info" className="mb-4">
-                <IconifyIcon icon="iconoir:info-circle" className="me-2" />
-                Crie login para o gestor da empresa acessar relatórios e acompanhar os resultados.
-              </Alert>
+              <h6 className='mb-3'>Acesso ao Dashboard da Empresa</h6>
 
               <Row>
                 <Col md={6}>
-                  <Form.Group className="mb-3">
+                  <Form.Group className='mb-3'>
                     <Form.Label>Login</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={loginEmpresa}
-                      onChange={(e) => setLoginEmpresa(e.target.value)}
-                      placeholder="usuario.empresa"
-                    />
+                    <Form.Control type='text' value={loginEmpresa} onChange={(e) => setLoginEmpresa(e.target.value)} placeholder='usuario.empresa' />
                   </Form.Group>
                 </Col>
                 <Col md={6}>
-                  <Form.Group className="mb-3">
+                  <Form.Group className='mb-3'>
                     <Form.Label>Email</Form.Label>
-                    <Form.Control
-                      type="email"
-                      value={emailEmpresa}
-                      onChange={(e) => setEmailEmpresa(e.target.value)}
-                      placeholder="gestor@empresa.com"
-                    />
+                    <Form.Control type='email' value={emailEmpresa} onChange={(e) => setEmailEmpresa(e.target.value)} placeholder='gestor@empresa.com' />
                   </Form.Group>
                 </Col>
               </Row>
 
-              <Form.Group className="mb-3">
+              <Form.Group className='mb-3'>
                 <Form.Label>Senha</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={senhaEmpresa}
-                  onChange={(e) => setSenhaEmpresa(e.target.value)}
-                  placeholder="********"
-                />
+                <Form.Control type='password' value={senhaEmpresa} onChange={(e) => setSenhaEmpresa(e.target.value)} placeholder='********' />
               </Form.Group>
 
-              <Form.Check
-                type="checkbox"
-                id="acessa-dashboard"
-                label="Acessa Dashboard"
-                checked={acessaDashboard}
-                onChange={(e) => setAcessaDashboard(e.target.checked)}
-                className="mb-2"
-              />
-              
-              <Form.Check
-                type="checkbox"
-                id="acessa-relatorios"
-                label="Acessa Relatórios"
-                checked={acessaRelatorios}
-                onChange={(e) => setAcessaRelatorios(e.target.checked)}
-                className="mb-3"
-              />
+              <Form.Check type='checkbox' id='acessa-dashboard' label='Acessa Dashboard' checked={acessaDashboard} onChange={(e) => setAcessaDashboard(e.target.checked)} className='mb-2' />
+              <Form.Check type='checkbox' id='acessa-relatorios' label='Acessa Relatórios' checked={acessaRelatorios} onChange={(e) => setAcessaRelatorios(e.target.checked)} className='mb-3' />
 
-              <Button variant="success" onClick={handleCriarLogin}>
-                <IconifyIcon icon="iconoir:plus" className="me-2" />
-                {loginEmpresa ? 'Atualizar Login' : 'Criar Login'}
+              <Button variant='success' onClick={handleSalvarLogin}>
+                <IconifyIcon icon='iconoir:check' className='me-2' />
+                Salvar Login
               </Button>
             </Card.Body>
           </Card>
         </Tab>
 
-        <Tab eventKey="dashboard" title="Config. Dashboard">
+        <Tab eventKey='dashboard' title='Config. Dashboard'>
           <Card>
             <Card.Body>
-              <h6 className="mb-3">Filtros para Relatórios</h6>
-              
-              <Alert variant="info" className="mb-4">
-                <IconifyIcon icon="iconoir:info-circle" className="me-2" />
-                Configure quais campos serão usados como filtros nos relatórios de heatmap e semáforo.
-              </Alert>
-
+              <h6 className='mb-3'>Filtros para Relatórios</h6>
               <Row>
                 <Col md={6}>
-                  <Form.Group className="mb-3">
+                  <Form.Group className='mb-3'>
                     <Form.Label>Filtro Heatmap 1</Form.Label>
-                    <Form.Select 
-                      value={filtroHeatmap1} 
-                      onChange={(e) => setFiltroHeatmap1(e.target.value)}
-                    >
-                      <option value="">Selecione um campo...</option>
-                      <option value="faixa_etaria">Faixa Etária</option>
-                      <option value="sexo">Sexo</option>
-                      <option value="setor">Setor</option>
-                      <option value="cargo">Cargo</option>
+                    <Form.Select value={filtroHeatmap1} onChange={(e) => setFiltroHeatmap1(e.target.value)}>
+                      <option value=''>Selecione um campo...</option>
+                      <option value='faixa_etaria'>Faixa Etária</option>
+                      <option value='sexo'>Sexo</option>
+                      <option value='setor'>Setor</option>
+                      <option value='cargo'>Cargo</option>
                     </Form.Select>
                   </Form.Group>
                 </Col>
                 <Col md={6}>
-                  <Form.Group className="mb-3">
+                  <Form.Group className='mb-3'>
                     <Form.Label>Filtro Heatmap 2</Form.Label>
-                    <Form.Select 
-                      value={filtroHeatmap2} 
-                      onChange={(e) => setFiltroHeatmap2(e.target.value)}
-                    >
-                      <option value="">Selecione um campo...</option>
-                      <option value="faixa_etaria">Faixa Etária</option>
-                      <option value="sexo">Sexo</option>
-                      <option value="setor">Setor</option>
-                      <option value="cargo">Cargo</option>
+                    <Form.Select value={filtroHeatmap2} onChange={(e) => setFiltroHeatmap2(e.target.value)}>
+                      <option value=''>Selecione um campo...</option>
+                      <option value='faixa_etaria'>Faixa Etária</option>
+                      <option value='sexo'>Sexo</option>
+                      <option value='setor'>Setor</option>
+                      <option value='cargo'>Cargo</option>
                     </Form.Select>
                   </Form.Group>
                 </Col>
@@ -430,34 +347,26 @@ export default function EditarEmpresa() {
         </Tab>
       </Tabs>
 
-      {/* Botões de Ação */}
-      <div className="d-flex justify-content-between">
-        <Button
-          variant="outline-secondary"
-          onClick={() => router.push('/adm/lista-empresas')}
-        >
-          <IconifyIcon icon="iconoir:navigate-left" className="me-2" />
+      <div className='d-flex justify-content-between'>
+        <Button variant='outline-secondary' onClick={() => router.push('/adm/lista-empresas')}>
+          <IconifyIcon icon='iconoir:navigate-left' className='me-2' />
           Voltar
         </Button>
-        
-        <div className="d-flex gap-2">
-          <Button variant="outline-danger" onClick={() => alert('Empresa excluída!')}>
-            <IconifyIcon icon="iconoir:trash" className="me-2" />
+
+        <div className='d-flex gap-2'>
+          <Button variant='outline-danger' onClick={handleExcluir} disabled={removendo}>
+            <IconifyIcon icon='iconoir:trash' className='me-2' />
             Excluir
           </Button>
-          <Button
-            variant="success"
-            onClick={handleSalvar}
-            disabled={salvando}
-          >
+          <Button variant='success' onClick={handleSalvar} disabled={salvando}>
             {salvando ? (
               <>
-                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span className='spinner-border spinner-border-sm me-2' role='status' aria-hidden='true'></span>
                 Salvando...
               </>
             ) : (
               <>
-                <IconifyIcon icon="iconoir:check" className="me-2" />
+                <IconifyIcon icon='iconoir:check' className='me-2' />
                 Salvar Alterações
               </>
             )}

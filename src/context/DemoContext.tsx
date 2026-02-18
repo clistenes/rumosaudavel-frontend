@@ -1,6 +1,6 @@
-'use client'
+﻿'use client'
 
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { 
   EMPRESAS_DEMO, 
   PARTICIPANTES_DEMO, 
@@ -13,6 +13,7 @@ import {
   DIMENSOES_DEMO,
   GRUPOS_DEMO
 } from '@/assets/data/demo-data'
+import type { DemoProgramaQuestionarioVinculo, DemoState } from '@/types/demo'
 
 interface DemoContextType {
   // Dados
@@ -37,7 +38,7 @@ interface DemoContextType {
   updateParticipante: (id: number, data: any) => void
   deleteParticipante: (id: number) => void
   
-  // Actions Questionários
+  // Actions QuestionÃ¡rios
   addQuestionario: (questionario: any) => void
   updateQuestionario: (id: number, data: any) => void
   deleteQuestionario: (id: number) => void
@@ -49,8 +50,10 @@ interface DemoContextType {
   updatePrograma: (id: number, data: any) => void
   deletePrograma: (id: number) => void
   duplicarPrograma: (id: number) => void
+  getProgramaQuestionarios: (programaId: number) => DemoProgramaQuestionarioVinculo[]
+  setProgramaQuestionarios: (programaId: number, vinculos: DemoProgramaQuestionarioVinculo[]) => void
   
-  // Actions Usuários
+  // Actions UsuÃ¡rios
   addUsuario: (usuario: any) => void
   updateUsuario: (id: number, data: any) => void
   deleteUsuario: (id: number) => void
@@ -69,7 +72,7 @@ interface DemoContextType {
   deleteAlternativa: (id: number) => void
   getAlternativasByPergunta: (perguntaId: number) => any[]
   
-  // Actions Dimensões
+  // Actions DimensÃµes
   addDimensao: (dimensao: any) => void
   updateDimensao: (id: number, data: any) => void
   deleteDimensao: (id: number) => void
@@ -89,23 +92,93 @@ interface DemoContextType {
 }
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined)
+const DEMO_STORAGE_KEY = 'rumosaudavel:demo-state:v1'
+
+const getInitialDemoState = (): DemoState => ({
+  empresas: [...EMPRESAS_DEMO],
+  participantes: [...PARTICIPANTES_DEMO],
+  questionarios: [...QUESTIONARIOS_DEMO],
+  programas: [...PROGRAMAS_DEMO],
+  alertas: [...ALERTAS_DEMO],
+  usuarios: [...USUARIOS_DEMO],
+  perguntas: [...PERGUNTAS_DEMO],
+  alternativas: [...ALTERNATIVAS_DEMO],
+  dimensoes: [...DIMENSOES_DEMO],
+  grupos: [...GRUPOS_DEMO],
+})
 
 export function DemoProvider({ children }: { children: React.ReactNode }) {
-  const [empresas, setEmpresas] = useState([...EMPRESAS_DEMO])
-  const [participantes, setParticipantes] = useState([...PARTICIPANTES_DEMO])
-  const [questionarios, setQuestionarios] = useState([...QUESTIONARIOS_DEMO])
-  const [programas, setProgramas] = useState([...PROGRAMAS_DEMO])
-  const [alertas, setAlertas] = useState([...ALERTAS_DEMO])
-  const [usuarios, setUsuarios] = useState([...USUARIOS_DEMO])
-  const [perguntas, setPerguntas] = useState([...PERGUNTAS_DEMO])
-  const [alternativas, setAlternativas] = useState([...ALTERNATIVAS_DEMO])
-  const [dimensoes, setDimensoes] = useState([...DIMENSOES_DEMO])
-  const [grupos, setGrupos] = useState([...GRUPOS_DEMO])
+  const initialState = getInitialDemoState()
+  const [empresas, setEmpresas] = useState(initialState.empresas)
+  const [participantes, setParticipantes] = useState(initialState.participantes)
+  const [questionarios, setQuestionarios] = useState(initialState.questionarios)
+  const [programas, setProgramas] = useState(initialState.programas)
+  const [alertas, setAlertas] = useState(initialState.alertas)
+  const [usuarios, setUsuarios] = useState(initialState.usuarios)
+  const [perguntas, setPerguntas] = useState(initialState.perguntas)
+  const [alternativas, setAlternativas] = useState(initialState.alternativas)
+  const [dimensoes, setDimensoes] = useState(initialState.dimensoes)
+  const [grupos, setGrupos] = useState(initialState.grupos)
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const rawState = window.localStorage.getItem(DEMO_STORAGE_KEY)
+    if (!rawState) {
+      setHydrated(true)
+      return
+    }
+
+    try {
+      const parsedState = JSON.parse(rawState) as Partial<DemoState>
+      const fallbackState = getInitialDemoState()
+
+      setEmpresas(parsedState.empresas ?? fallbackState.empresas)
+      setParticipantes(parsedState.participantes ?? fallbackState.participantes)
+      setQuestionarios(parsedState.questionarios ?? fallbackState.questionarios)
+      setProgramas(parsedState.programas ?? fallbackState.programas)
+      setAlertas(parsedState.alertas ?? fallbackState.alertas)
+      setUsuarios(parsedState.usuarios ?? fallbackState.usuarios)
+      setPerguntas(parsedState.perguntas ?? fallbackState.perguntas)
+      setAlternativas(parsedState.alternativas ?? fallbackState.alternativas)
+      setDimensoes(parsedState.dimensoes ?? fallbackState.dimensoes)
+      setGrupos(parsedState.grupos ?? fallbackState.grupos)
+    } catch (error) {
+      console.error('Erro ao carregar estado da demo', error)
+    } finally {
+      setHydrated(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated || typeof window === 'undefined') return
+
+    const stateToPersist: DemoState = {
+      empresas,
+      participantes,
+      questionarios,
+      programas,
+      alertas,
+      usuarios,
+      perguntas,
+      alternativas,
+      dimensoes,
+      grupos,
+    }
+
+    window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(stateToPersist))
+  }, [hydrated, empresas, participantes, questionarios, programas, alertas, usuarios, perguntas, alternativas, dimensoes, grupos])
 
   // Empresas
   const addEmpresa = useCallback((empresa: any) => {
     const newId = Math.max(...empresas.map(e => e.id), 0) + 1
-    setEmpresas(prev => [...prev, { ...empresa, id: newId, dataCadastro: new Date().toISOString().split('T')[0] }])
+    setEmpresas(prev => [...prev, {
+      ...empresa,
+      id: newId,
+      status: empresa.status || 'ativo',
+      dataCadastro: empresa.dataCadastro || new Date().toISOString().split('T')[0],
+    }])
   }, [empresas])
 
   const updateEmpresa = useCallback((id: number, data: any) => {
@@ -130,7 +203,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setParticipantes(prev => prev.filter(p => p.id !== id))
   }, [])
 
-  // Questionários
+  // QuestionÃ¡rios
   const addQuestionario = useCallback((questionario: any) => {
     const newId = Math.max(...questionarios.map(q => q.id), 0) + 1
     setQuestionarios(prev => [...prev, { 
@@ -148,7 +221,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
 
   const deleteQuestionario = useCallback((id: number) => {
     setQuestionarios(prev => prev.filter(q => q.id !== id))
-    // Também remove perguntas, alternativas, dimensões e grupos associados
+    // TambÃ©m remove perguntas, alternativas, dimensÃµes e grupos associados
     setPerguntas(prev => prev.filter(p => p.id_questionario !== id))
     setAlternativas(prev => prev.filter(a => a.id_questionario !== id))
     setDimensoes(prev => prev.filter(d => d.id_questionario !== id))
@@ -162,8 +235,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       setQuestionarios(prev => [...prev, {
         ...q,
         id: newId,
-        codigo: `${q.codigo} (Cópia)`,
-        nome: `${q.nome} (Cópia)`,
+        codigo: `${q.codigo} (CÃ³pia)`,
+        nome: `${q.nome} (CÃ³pia)`,
         aplicacoesTotal: 0,
         aplicacoesUltimoMes: 0
       }])
@@ -192,9 +265,30 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   // Programas
   const addPrograma = useCallback((programa: any) => {
     const newId = Math.max(...programas.map((p: any) => p.id), 0) + 1
-    setProgramas(prev => [...prev, { ...programa, id: newId }])
+    setProgramas(prev => [...prev, {
+      ...programa,
+      id: newId,
+      status: programa.status || 'ativo',
+      questionariosVinculados: programa.questionariosVinculados || [],
+    }])
+  }, [programas])
+  const getProgramaQuestionarios = useCallback((programaId: number) => {
+    const programa = programas.find((p: any) => p.id === programaId) as any
+    return (programa?.questionariosVinculados || []).sort((a: any, b: any) => a.ordem - b.ordem)
   }, [programas])
 
+  const setProgramaQuestionarios = useCallback((programaId: number, vinculos: DemoProgramaQuestionarioVinculo[]) => {
+    setProgramas(prev => prev.map((p: any) => {
+      if (p.id !== programaId) return p
+      return {
+        ...p,
+        questionariosVinculados: vinculos
+          .slice()
+          .sort((a, b) => a.ordem - b.ordem)
+          .map((v, index) => ({ ...v, ordem: index + 1 })),
+      }
+    }))
+  }, [])
   const updatePrograma = useCallback((id: number, data: any) => {
     setProgramas(prev => prev.map((p: any) => p.id === id ? { ...p, ...data } : p))
   }, [])
@@ -204,19 +298,19 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const duplicarPrograma = useCallback((id: number) => {
-    const programa = programas.find((p: any) => p.id === id)
+    const programa = programas.find((p: any) => p.id === id) as any
     if (programa) {
       const newId = Math.max(...programas.map((p: any) => p.id), 0) + 1
       setProgramas(prev => [...prev, {
         ...programa,
         id: newId,
-        nome: `${programa.nome} (Cópia)`,
-        status: 'ativo'
+        nome: `${programa.nome} (CÃ³pia)`,
+        status: 'ativo',
+        questionariosVinculados: [...(programa.questionariosVinculados || [])]
       }])
     }
   }, [programas])
-
-  // Usuários
+  // UsuÃ¡rios
   const addUsuario = useCallback((usuario: any) => {
     const newId = Math.max(...usuarios.map((u: any) => u.id), 0) + 1
     setUsuarios(prev => [...prev, { 
@@ -242,7 +336,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       setUsuarios(prev => [...prev, {
         ...usuario,
         id: newId,
-        nome: `${usuario.nome} (Cópia)`,
+        nome: `${usuario.nome} (CÃ³pia)`,
         email: `copia_${usuario.email}`,
         dataCadastro: new Date().toISOString().split('T')[0],
         ultimoAcesso: new Date().toISOString()
@@ -311,7 +405,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     return alternativas.filter(a => a.id_pergunta === perguntaId)
   }, [alternativas])
 
-  // Dimensões
+  // DimensÃµes
   const addDimensao = useCallback((dimensao: any) => {
     const newId = Math.max(...dimensoes.map(d => d.id), 0) + 1
     setDimensoes(prev => [...prev, { 
@@ -387,7 +481,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
 
   // Salvar ordem completa (hierarquia)
   const salvarOrdemQuestionario = useCallback((questionarioId: number, estrutura: any[]) => {
-    // Atualiza dimensões, grupos e perguntas com base na estrutura hierárquica
+    // Atualiza dimensÃµes, grupos e perguntas com base na estrutura hierÃ¡rquica
     estrutura.forEach((dimensao, dimIndex) => {
       updateDimensao(dimensao.id, {
         dimensao_pos: dimIndex + 1,
@@ -441,6 +535,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       updatePrograma,
       deletePrograma,
       duplicarPrograma,
+      getProgramaQuestionarios,
+      setProgramaQuestionarios,
       addUsuario,
       updateUsuario,
       deleteUsuario,
@@ -479,3 +575,4 @@ export function useDemo() {
   }
   return context
 }
+
