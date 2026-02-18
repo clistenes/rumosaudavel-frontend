@@ -1,220 +1,100 @@
 ﻿'use client'
 
-import { useState } from 'react'
-import { Card, Button, Form, Table, Badge, Row, Col, Pagination } from 'react-bootstrap'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import IconifyIcon from '@/components/wrappers/IconifyIcon'
+import { Card, Form, Table } from 'react-bootstrap'
 import PageTitle from '@/components/PageTitle'
-import ComponentContainerCard from '@/components/ComponentContainerCard'
+import { useDemo } from '@/context/DemoContext'
 
-interface Usuario {
-  id: number
-  nome: string
-  email: string
-  empresa: string
-  perfil: string
-  status: 'ativo' | 'inativo' | 'bloqueado'
-  ultimoAcesso: string
+const getCadastroLabel = (participante: any) => {
+  if (participante.status === 'inativo') return 'nao'
+  return 'sim'
 }
 
-const usuariosDemo: Usuario[] = [
-  { id: 1, nome: 'Carlos Silva', email: 'carlos@techcorp.com', empresa: 'TechCorp Brasil', perfil: 'Gestor', status: 'ativo', ultimoAcesso: 'Hoje, 10:30' },
-  { id: 2, nome: 'Maria Santos', email: 'maria@inovacao.com', empresa: 'InovaÃ§Ã£o Ltda', perfil: 'RH', status: 'ativo', ultimoAcesso: 'Ontem, 15:45' },
-  { id: 3, nome: 'JoÃ£o Pereira', email: 'joao@saudecorp.com', empresa: 'SaÃºde Corp', perfil: 'Admin', status: 'ativo', ultimoAcesso: 'Hoje, 09:15' },
-  { id: 4, nome: 'Ana Costa', email: 'ana@empresaabc.com', empresa: 'Empresa ABC', perfil: 'Gestor', status: 'inativo', ultimoAcesso: '10/02/2026' },
-  { id: 5, nome: 'Pedro Lima', email: 'pedro@grupoxyz.com', empresa: 'Grupo XYZ', perfil: 'RH', status: 'bloqueado', ultimoAcesso: '05/02/2026' },
-]
-
 export default function PesquisarUsuarioPage() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filtroEmpresa, setFiltroEmpresa] = useState('')
-  const [filtroPerfil, setFiltroPerfil] = useState('')
-  const [filtroStatus, setFiltroStatus] = useState('')
+  const { participantes, empresas } = useDemo()
+  const [busca, setBusca] = useState('')
 
-  const usuariosFiltrados = usuariosDemo.filter(u => {
-    const matchSearch = u.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                       u.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchEmpresa = !filtroEmpresa || u.empresa === filtroEmpresa
-    const matchPerfil = !filtroPerfil || u.perfil === filtroPerfil
-    const matchStatus = !filtroStatus || u.status === filtroStatus
-    return matchSearch && matchEmpresa && matchPerfil && matchStatus
-  })
+  const linhas = useMemo(() => {
+    return participantes
+      .map((participante: any) => {
+        const empresa = empresas.find((item: any) => item.id === participante.empresaId)
 
-  const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      ativo: 'success',
-      inativo: 'secondary',
-      bloqueado: 'danger',
-    }
-    return <Badge bg={colors[status]}>{status}</Badge>
-  }
+        return {
+          id: participante.id,
+          login: participante.login || participante.email?.split('@')[0] || '-',
+          nome: participante.nome || '-',
+          empresa: empresa?.nome || '-',
+          email: participante.email || '-',
+          cadastrado: getCadastroLabel(participante),
+        }
+      })
+      .filter((linha) => {
+        if (!busca.trim()) return true
+        const termo = busca.toLowerCase()
+
+        return (
+          linha.login.toLowerCase().includes(termo) ||
+          linha.nome.toLowerCase().includes(termo) ||
+          linha.empresa.toLowerCase().includes(termo) ||
+          linha.email.toLowerCase().includes(termo)
+        )
+      })
+  }, [participantes, empresas, busca])
 
   return (
     <>
-      <PageTitle title="Pesquisar UsuÃ¡rio" subName="Buscar e gerenciar usuÃ¡rios de empresas" />
+      <PageTitle title='Pesquisar' subName='Acessos' />
 
-      <Row className="mb-4">
-        <Col xl={3} md={6}>
-          <Card className="bg-primary text-white">
-            <Card.Body className="d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="mb-0">Total UsuÃ¡rios</h6>
-                <h3 className="mb-0">156</h3>
-              </div>
-              <IconifyIcon icon="fa:users" className="fs-1 opacity-50" />
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col xl={3} md={6}>
-          <Card className="bg-success text-white">
-            <Card.Body className="d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="mb-0">Ativos</h6>
-                <h3 className="mb-0">142</h3>
-              </div>
-              <IconifyIcon icon="fa:user-check" className="fs-1 opacity-50" />
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col xl={3} md={6}>
-          <Card className="bg-warning text-white">
-            <Card.Body className="d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="mb-0">Inativos</h6>
-                <h3 className="mb-0">8</h3>
-              </div>
-              <IconifyIcon icon="fa:user-times" className="fs-1 opacity-50" />
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col xl={3} md={6}>
-          <Card className="bg-danger text-white">
-            <Card.Body className="d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="mb-0">Bloqueados</h6>
-                <h3 className="mb-0">6</h3>
-              </div>
-              <IconifyIcon icon="fa:user-lock" className="fs-1 opacity-50" />
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      <ComponentContainerCard title="Filtros de Pesquisa">
-        <Row>
-          <Col lg={4} md={6} className="mb-3">
-            <Form.Control
-              type="text"
-              placeholder="Buscar por nome ou e-mail..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </Col>
-          <Col lg={2} md={6} className="mb-3">
-            <Form.Select value={filtroEmpresa} onChange={(e) => setFiltroEmpresa(e.target.value)}>
-              <option value="">Todas as empresas</option>
-              <option value="TechCorp Brasil">TechCorp Brasil</option>
-              <option value="InovaÃ§Ã£o Ltda">InovaÃ§Ã£o Ltda</option>
-              <option value="SaÃºde Corp">SaÃºde Corp</option>
-              <option value="Empresa ABC">Empresa ABC</option>
-            </Form.Select>
-          </Col>
-          <Col lg={2} md={6} className="mb-3">
-            <Form.Select value={filtroPerfil} onChange={(e) => setFiltroPerfil(e.target.value)}>
-              <option value="">Todos os perfis</option>
-              <option value="Gestor">Gestor</option>
-              <option value="RH">RH</option>
-              <option value="Admin">Admin</option>
-            </Form.Select>
-          </Col>
-          <Col lg={2} md={6} className="mb-3">
-            <Form.Select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
-              <option value="">Todos os status</option>
-              <option value="ativo">Ativo</option>
-              <option value="inativo">Inativo</option>
-              <option value="bloqueado">Bloqueado</option>
-            </Form.Select>
-          </Col>
-          <Col lg={2} md={6} className="mb-3">
-            <Link href="/empresas/novo-usuario-empresa" className="btn btn-primary w-100">
-              <IconifyIcon icon="fa:plus" className="me-1" />
-              Novo Acesso
-            </Link>
-          </Col>
-        </Row>
-      </ComponentContainerCard>
-
-      <ComponentContainerCard title={`Resultados (${usuariosFiltrados.length})`}>
-        <Table responsive className="mb-0">
-          <thead>
-            <tr>
-              <th>UsuÃ¡rio</th>
-              <th>Empresa</th>
-              <th>Perfil</th>
-              <th>Status</th>
-              <th>Ãšltimo Acesso</th>
-              <th>AÃ§Ãµes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuariosFiltrados.map((usuario) => (
-              <tr key={usuario.id}>
-                <td>
-                  <div className="d-flex align-items-center">
-                    <div className="bg-primary rounded-circle text-white d-flex align-items-center justify-content-center me-2" style={{ width: '36px', height: '36px' }}>
-                      <small>{usuario.nome.charAt(0)}</small>
-                    </div>
-                    <div>
-                      <div className="fw-medium">{usuario.nome}</div>
-                      <small className="text-muted">{usuario.email}</small>
-                    </div>
-                  </div>
-                </td>
-                <td>{usuario.empresa}</td>
-                <td><Badge bg="info">{usuario.perfil}</Badge></td>
-                <td>{getStatusBadge(usuario.status)}</td>
-                <td>{usuario.ultimoAcesso}</td>
-                <td>
-                  <Button variant="link" size="sm" className="p-0 me-2">
-                    <IconifyIcon icon="fa:edit" />
-                  </Button>
-                  <Button variant="link" size="sm" className="p-0 me-2">
-                    <IconifyIcon icon="fa:key" />
-                  </Button>
-                  <Button variant="link" size="sm" className="p-0 text-danger">
-                    <IconifyIcon icon="fa:ban" />
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-
-        {usuariosFiltrados.length === 0 && (
-          <div className="text-center py-5">
-            <IconifyIcon icon="fa:search" className="display-4 text-muted mb-3" />
-            <h5>Nenhum usuÃ¡rio encontrado</h5>
-            <p className="text-muted">Tente ajustar os filtros de pesquisa</p>
+      <Card>
+        <Card.Body className='p-0'>
+          <div className='d-flex justify-content-end border-bottom p-3'>
+            <div style={{ width: '360px' }}>
+              <Form.Control
+                type='text'
+                placeholder='Pesquisar'
+                value={busca}
+                onChange={(event) => setBusca(event.target.value)}
+              />
+            </div>
           </div>
-        )}
 
-        <div className="d-flex justify-content-between align-items-center mt-3">
-          <small className="text-muted">
-            Mostrando {usuariosFiltrados.length} de {usuariosDemo.length} usuÃ¡rios
-          </small>
-          <Pagination size="sm">
-            <Pagination.First />
-            <Pagination.Prev />
-            <Pagination.Item active>{1}</Pagination.Item>
-            <Pagination.Item>{2}</Pagination.Item>
-            <Pagination.Item>{3}</Pagination.Item>
-            <Pagination.Next />
-            <Pagination.Last />
-          </Pagination>
-        </div>
-      </ComponentContainerCard>
+          <div className='table-responsive'>
+            <Table className='mb-0'>
+              <thead>
+                <tr>
+                  <th className='text-center'>login</th>
+                  <th className='text-center'>nome</th>
+                  <th className='text-center'>empresa</th>
+                  <th className='text-center'>email</th>
+                  <th className='text-center'>cadastrado</th>
+                  <th className='text-center'>link</th>
+                </tr>
+              </thead>
+              <tbody>
+                {linhas.map((linha) => (
+                  <tr key={linha.id}>
+                    <td className='text-center'>{linha.login}</td>
+                    <td className='text-center'>{linha.nome}</td>
+                    <td className='text-center'>{linha.empresa}</td>
+                    <td className='text-center'>{linha.email}</td>
+                    <td className='text-center'>{linha.cadastrado}</td>
+                    <td className='text-center'>
+                      <Link href={`/adm/info-participante/${linha.id}`} className='text-decoration-none'>
+                        + info
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+
+          {linhas.length === 0 && (
+            <div className='text-center py-4 text-muted'>Nenhum resultado encontrado.</div>
+          )}
+        </Card.Body>
+      </Card>
     </>
   )
 }
-
-
