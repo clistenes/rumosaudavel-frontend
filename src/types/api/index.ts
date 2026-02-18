@@ -10,6 +10,12 @@ export interface ApiResponse<T> {
   meta?: ApiMeta
 }
 
+export interface ApiDomainError extends Error {
+  status: number
+  fieldErrors?: ApiError[]
+  raw?: unknown
+}
+
 export interface ApiError {
   field: string
   message: string
@@ -186,3 +192,19 @@ export interface Configuracao {
   descricao: string
   categoria: string
 }
+
+export type RepositoryIdentifier = number | string
+
+export interface Repository<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
+  list: (params?: Record<string, unknown>) => Promise<ApiResponse<T[] | PaginatedResponse<T>>>
+  get: (id: RepositoryIdentifier) => Promise<ApiResponse<T>>
+  create: (data: TCreate) => Promise<ApiResponse<T>>
+  update: (id: RepositoryIdentifier, data: TUpdate) => Promise<ApiResponse<T>>
+  delete: (id: RepositoryIdentifier) => Promise<ApiResponse<void>>
+}
+
+export type EmpresaApi = Empresa
+export type ParticipanteApi = Participante
+export type ProgramaApi = Programa
+export type QuestionarioApi = Questionario
+export type RelatorioApi = Record<string, unknown>

@@ -1,5 +1,5 @@
 /**
- * Serviço de Relatórios
+ * Servico de relatorios
  */
 
 import { http, API_ENDPOINTS } from './http.service'
@@ -29,97 +29,66 @@ export interface ExportarRelatorioParams {
 }
 
 export const relatorioService = {
-  /**
-   * Busca relatório analítico
-   */
   async analitico(params: RelatorioAnaliticoParams = {}): Promise<ApiResponse<unknown>> {
-    const queryString = new URLSearchParams()
-    if (params.dataInicio) queryString.append('data_inicio', params.dataInicio)
-    if (params.dataFim) queryString.append('data_fim', params.dataFim)
-    if (params.programaId) queryString.append('programa_id', params.programaId.toString())
-    if (params.empresaId) queryString.append('empresa_id', params.empresaId.toString())
-    
-    return http.get(`${API_ENDPOINTS.relatorios.analitico}?${queryString.toString()}`)
+    const query = new URLSearchParams()
+    if (params.dataInicio) query.append('data_inicio', params.dataInicio)
+    if (params.dataFim) query.append('data_fim', params.dataFim)
+    if (params.programaId) query.append('programa_id', String(params.programaId))
+    if (params.empresaId) query.append('empresa_id', String(params.empresaId))
+    return http.get(`${API_ENDPOINTS.relatorios.analitico}?${query.toString()}`)
   },
 
-  /**
-   * Busca dados para gráficos
-   */
   async grafico(params: RelatorioGraficoParams): Promise<ApiResponse<unknown>> {
-    const queryString = new URLSearchParams()
-    queryString.append('tipo', params.tipo)
-    queryString.append('periodo', params.periodo)
-    if (params.empresaId) queryString.append('empresa_id', params.empresaId.toString())
-    if (params.programaId) queryString.append('programa_id', params.programaId.toString())
-    
-    return http.get(`${API_ENDPOINTS.relatorios.grafico}?${queryString.toString()}`)
+    const query = new URLSearchParams()
+    query.append('tipo', params.tipo)
+    query.append('periodo', params.periodo)
+    if (params.empresaId) query.append('empresa_id', String(params.empresaId))
+    if (params.programaId) query.append('programa_id', String(params.programaId))
+    return http.get(`${API_ENDPOINTS.relatorios.grafico}?${query.toString()}`)
   },
 
-  /**
-   * Busca relatório termômetro
-   */
   async termometro(params: RelatorioAnaliticoParams = {}): Promise<ApiResponse<unknown>> {
-    const queryString = new URLSearchParams()
-    if (params.dataInicio) queryString.append('data_inicio', params.dataInicio)
-    if (params.dataFim) queryString.append('data_fim', params.dataFim)
-    if (params.programaId) queryString.append('programa_id', params.programaId.toString())
-    if (params.empresaId) queryString.append('empresa_id', params.empresaId.toString())
-    
-    return http.get(`${API_ENDPOINTS.relatorios.termometro}?${queryString.toString()}`)
+    const query = new URLSearchParams()
+    if (params.dataInicio) query.append('data_inicio', params.dataInicio)
+    if (params.dataFim) query.append('data_fim', params.dataFim)
+    if (params.programaId) query.append('programa_id', String(params.programaId))
+    if (params.empresaId) query.append('empresa_id', String(params.empresaId))
+    return http.get(`${API_ENDPOINTS.relatorios.termometro}?${query.toString()}`)
   },
 
-  /**
-   * Busca relatório semáforo
-   */
   async semaforo(params: RelatorioAnaliticoParams = {}): Promise<ApiResponse<unknown>> {
-    const queryString = new URLSearchParams()
-    if (params.dataInicio) queryString.append('data_inicio', params.dataInicio)
-    if (params.dataFim) queryString.append('data_fim', params.dataFim)
-    if (params.programaId) queryString.append('programa_id', params.programaId.toString())
-    if (params.empresaId) queryString.append('empresa_id', params.empresaId.toString())
-    
-    return http.get(`${API_ENDPOINTS.relatorios.semaforo}?${queryString.toString()}`)
+    const query = new URLSearchParams()
+    if (params.dataInicio) query.append('data_inicio', params.dataInicio)
+    if (params.dataFim) query.append('data_fim', params.dataFim)
+    if (params.programaId) query.append('programa_id', String(params.programaId))
+    if (params.empresaId) query.append('empresa_id', String(params.empresaId))
+    return http.get(`${API_ENDPOINTS.relatorios.semaforo}?${query.toString()}`)
   },
 
-  /**
-   * Busca relatório individual do participante
-   */
   async individual(
-    participanteId: number, 
+    participanteId: number,
     params: { dataInicio?: string; dataFim?: string } = {}
   ): Promise<ApiResponse<unknown>> {
-    const queryString = new URLSearchParams()
-    if (params.dataInicio) queryString.append('data_inicio', params.dataInicio)
-    if (params.dataFim) queryString.append('data_fim', params.dataFim)
-    
-    return http.get(`${API_ENDPOINTS.relatorios.individual(participanteId)}?${queryString.toString()}`)
+    const query = new URLSearchParams()
+    if (params.dataInicio) query.append('data_inicio', params.dataInicio)
+    if (params.dataFim) query.append('data_fim', params.dataFim)
+    return http.get(`${API_ENDPOINTS.relatorios.individualLegacy(participanteId)}?${query.toString()}`)
   },
 
-  /**
-   * Exporta relatório
-   */
   async exportar(params: ExportarRelatorioParams): Promise<Blob> {
-    const queryString = new URLSearchParams()
-    queryString.append('formato', params.formato)
-    queryString.append('tipo', params.tipo)
-    if (params.dataInicio) queryString.append('data_inicio', params.dataInicio)
-    if (params.dataFim) queryString.append('data_fim', params.dataFim)
-    if (params.programaId) queryString.append('programa_id', params.programaId.toString())
-    if (params.empresaId) queryString.append('empresa_id', params.empresaId.toString())
-    
-    const response = await fetch(
-      `${API_ENDPOINTS.relatorios.exportar}?${queryString.toString()}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-        },
-      }
+    const query = new URLSearchParams()
+    query.append('formato', params.formato)
+    query.append('tipo', params.tipo)
+    if (params.dataInicio) query.append('data_inicio', params.dataInicio)
+    if (params.dataFim) query.append('data_fim', params.dataFim)
+    if (params.programaId) query.append('programa_id', String(params.programaId))
+    if (params.empresaId) query.append('empresa_id', String(params.empresaId))
+
+    const response = await http.get<Blob>(
+      `${API_ENDPOINTS.relatorios.exportar}?${query.toString()}`,
+      { parseAs: 'blob' }
     )
-    
-    if (!response.ok) {
-      throw new Error('Erro ao exportar relatório')
-    }
-    
-    return response.blob()
+
+    return response.data
   },
 }

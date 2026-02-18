@@ -1,41 +1,31 @@
 /**
- * Configuração da API
- * 
- * Quando sair do modo demo, altere o baseURL para a URL da API real
- * e remova NEXT_PUBLIC_DEMO_MODE do .env.local
+ * Configuracao central da API.
+ * Em producao: /api/proxy (com sessao NextAuth no servidor).
+ * Em demo: mantem sinalizacao local para evitar chamadas reais.
  */
 
 const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 export const API_CONFIG = {
-  // URL base da API
-  // Em modo demo: usa /api/demo
-  // Em produção: usa /api/proxy para passar pelo proxy que adiciona o token do NextAuth
   baseURL: isDemo ? '/api/demo' : '/api/proxy',
-  
-  // Headers padrão
   headers: {
     'Content-Type': 'application/json',
   },
-  
-  // Tempo limite para requisições (ms)
   timeout: 30000,
-  
-  // Modo demo
   isDemo,
 }
 
-// Endpoints da API
 export const API_ENDPOINTS = {
-  // Auth
   auth: {
-    login: '/auth/login',
-    logout: '/auth/logout',
-    refresh: '/auth/refresh',
+    forgotPassword: '/auth/forgot-password',
+    resetPassword: '/auth/reset-password',
     me: '/auth/me',
   },
-  
-  // Empresas
+
+  adm: {
+    dashboard: '/dashboard/home',
+  },
+
   empresas: {
     list: '/empresas',
     create: '/empresas',
@@ -44,74 +34,98 @@ export const API_ENDPOINTS = {
     delete: (id: number) => `/empresas/${id}`,
     campos: (id: number) => `/empresas/${id}/campos`,
     participantes: (id: number) => `/empresas/${id}/participantes`,
+    logins: (id: number) => `/empresas/${id}/logins`,
+    filtros: (id: number) => `/empresas/${id}/filtros`,
+    deleteCampo: (campoId: number) => `/campos-empresas/${campoId}`,
   },
-  
-  // Participantes
+
   participantes: {
     list: '/participantes',
     create: '/participantes',
     get: (id: number) => `/participantes/${id}`,
     update: (id: number) => `/participantes/${id}`,
     delete: (id: number) => `/participantes/${id}`,
-    importar: '/participantes/importar',
-    prontuario: (id: number) => `/participantes/${id}/prontuario`,
-    relatorios: (id: number) => `/participantes/${id}/relatorios`,
+    importar: '/participantes/batch',
+    dadosPessoais: (id: number) => `/participantes/${id}/dados-pessoais`,
+    historicoCoaching: (id: number) => `/participantes/${id}/historico-coaching`,
+    deleteHistoricoCoaching: (id: number) => `/historico-coaching/${id}`,
+    contatos: (id: number) => `/participantes/${id}/contatos`,
+    deleteContato: (id: number) => `/contatos/${id}`,
+    simularAcesso: (id: number) => `/participantes/${id}/simular-acesso`,
+    pesquisarUsuarios: '/pesquisar-usuarios',
+    prontuario: (id: number) => `/participante/${id}/prontuario`,
+    relatorios: (id: number) => `/participante/${id}/relatorios`,
   },
-  
-  // Programas
+
   programas: {
     list: '/programas',
     create: '/programas',
     get: (id: number) => `/programas/${id}`,
     update: (id: number) => `/programas/${id}`,
     delete: (id: number) => `/programas/${id}`,
+    duplicar: (id: number) => `/programas/${id}/duplicar`,
     vincularQuestionario: (id: number) => `/programas/${id}/questionarios`,
-    desvincularQuestionario: (programaId: number, questionarioId: number) => 
+    desvincularQuestionario: (programaId: number, questionarioId: number) =>
       `/programas/${programaId}/questionarios/${questionarioId}`,
-    intervalos: (id: number) => `/programas/${id}/intervalos`,
+    vincularEmpresa: (programaId: number) => `/programas/${programaId}/empresas`,
+    removerVinculoEmpresa: (programaId: number, empresaId: number) =>
+      `/programas/${programaId}/empresas/${empresaId}`,
+    intervaloEmpresa: (programaId: number, empresaId: number) =>
+      `/programas/${programaId}/empresas/${empresaId}/intervalo`,
+    intervalos: (programaId: number) => `/programas/${programaId}/intervalos`,
+    acessosEmpresaPrograma: (empresaId: number, programaId: number) =>
+      `/empresas/${empresaId}/programas/${programaId}/acessos`,
   },
-  
-  // Questionários
+
   questionarios: {
     list: '/questionarios',
     create: '/questionarios',
     get: (id: number) => `/questionarios/${id}`,
     update: (id: number) => `/questionarios/${id}`,
     delete: (id: number) => `/questionarios/${id}`,
+    duplicar: (id: number) => `/questionarios/${id}/duplicar`,
+    exportar: (id: number) => `/questionarios/${id}/exportar`,
+    tipoResultado: (id: number) => `/questionarios/${id}/tipo-resultado`,
+    ordenar: (id: number) => `/questionarios/${id}/ordenar`,
     perguntas: (id: number) => `/questionarios/${id}/perguntas`,
-    respostas: (id: number) => `/questionarios/${id}/respostas`,
+    obterPergunta: (id: number) => `/perguntas/${id}`,
+    atualizarPergunta: (id: number) => `/perguntas/${id}`,
+    deletarPergunta: (id: number) => `/perguntas/${id}`,
+    perguntaDependente: '/perguntas/dependente',
+    adicionarAlternativa: (perguntaId: number) => `/perguntas/${perguntaId}/alternativas`,
+    deletarAlternativa: (id: number) => `/alternativas/${id}`,
+    intervalos: (questionarioId: number) => `/questionarios/${questionarioId}/intervalos`,
+    atualizarIntervalo: (id: number) => `/intervalos/${id}`,
+    deletarIntervalo: (id: number) => `/intervalos/${id}`,
+    salvarTextos: (questionarioId: number) => `/questionarios/${questionarioId}/textos`,
+    respostas: (id: number) => `/participante/questionario/${id}/respostas`,
   },
-  
-  // Relatórios
+
   relatorios: {
     analitico: '/relatorios/analitico',
     grafico: '/relatorios/grafico',
-    termometro: '/relatorios/termometro',
     semaforo: '/relatorios/semaforo',
-    individual: (participanteId: number) => `/relatorios/individual/${participanteId}`,
+    termometro: '/relatorios/termometro',
+    individualLegacy: (participanteId: number) => `/relatorios/individual/${participanteId}`,
+    analiticoEmpresa: (empresaId: number) => `/relatorios/${empresaId}/dashboard`,
+    graficoEmpresa: (empresaId: number) => `/relatorios/${empresaId}/grafico`,
+    semaforoEmpresa: (empresaId: number) => `/relatorios/${empresaId}/semaforo`,
+    heatmapEmpresa: (empresaId: number) => `/relatorios/${empresaId}/heatmap`,
+    individual: (userId: number, questionarioId: number) => `/relatorios/${userId}/${questionarioId}/individual`,
+    filtrosSemaforo: '/relatorios/semaforo/filtros',
     exportar: '/relatorios/exportar',
   },
-  
-  // Dashboard
+
+  usuarios: {
+    list: '/usuarios',
+    get: (id: number) => `/usuarios/${id}`,
+    create: '/usuarios',
+    update: (id: number) => `/usuarios/${id}`,
+    delete: (id: number) => `/usuarios/${id}`,
+  },
+
   dashboard: {
-    metricas: '/dashboard/metricas',
-    evolucao: '/dashboard/evolucao',
-    alertas: '/dashboard/alertas',
-  },
-  
-  // Notificações
-  notificacoes: {
-    list: '/notificacoes',
-    send: '/notificacoes/enviar',
-    templates: '/notificacoes/templates',
-    agendar: '/notificacoes/agendar',
-  },
-  
-  // Configurações
-  configuracoes: {
-    get: '/configuracoes',
-    update: '/configuracoes',
-    backup: '/configuracoes/backup',
-    exportar: '/configuracoes/exportar',
+    home: '/dashboard/home',
+    bugs: '/dashboard/bugs',
   },
 }

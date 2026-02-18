@@ -11,6 +11,7 @@ export { participanteService } from './participante.service'
 export { programaService } from './programa.service'
 export { questionarioService } from './questionario.service'
 export { relatorioService } from './relatorio.service'
+export { usuarioService } from './usuario.service'
 
 // Re-exportar tipos
 export type { 
@@ -41,3 +42,7 @@ export type {
   RelatorioGraficoParams,
   ExportarRelatorioParams 
 } from './relatorio.service'
+export type {
+  ListarUsuariosParams,
+  CriarUsuarioData,
+} from './usuario.service'

@@ -100,18 +100,18 @@ export const questionarioService = {
    * Atualiza uma pergunta
    */
   async atualizarPergunta(
-    questionarioId: number,
+    _questionarioId: number,
     perguntaId: number, 
     data: Partial<Pergunta>
   ): Promise<ApiResponse<Pergunta>> {
-    return http.put(`${API_ENDPOINTS.questionarios.perguntas(questionarioId)}/${perguntaId}`, data)
+    return http.put(API_ENDPOINTS.questionarios.atualizarPergunta(perguntaId), data)
   },
 
   /**
    * Remove uma pergunta
    */
-  async removerPergunta(questionarioId: number, perguntaId: number): Promise<ApiResponse<void>> {
-    return http.delete(`${API_ENDPOINTS.questionarios.perguntas(questionarioId)}/${perguntaId}`)
+  async removerPergunta(_questionarioId: number, perguntaId: number): Promise<ApiResponse<void>> {
+    return http.delete(API_ENDPOINTS.questionarios.deletarPergunta(perguntaId))
   },
 
   /**

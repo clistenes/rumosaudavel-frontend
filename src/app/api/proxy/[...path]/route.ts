@@ -2,89 +2,108 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { options } from '@/app/api/auth/[...nextauth]/options'
 
-export async function GET(request: NextRequest) {
-  return handleProxy(request, 'GET')
+const JSON_CONTENT_TYPE = 'application/json'
+
+const buildUpstreamUrl = (request: NextRequest) => {
+  const url = new URL(request.url)
+  const path = url.pathname.replace('/api/proxy/', '')
+  const queryString = url.search
+  return `${process.env.NEXT_PUBLIC_API_URL}/${path}${queryString}`
 }
 
-export async function POST(request: NextRequest) {
-  return handleProxy(request, 'POST')
+const buildHeaders = (request: NextRequest, token: string) => {
+  const headers = new Headers()
+  headers.set('Authorization', `Bearer ${token}`)
+
+  const contentType = request.headers.get('content-type')
+  if (contentType) headers.set('Content-Type', contentType)
+
+  const accept = request.headers.get('accept')
+  if (accept) headers.set('Accept', accept)
+
+  return headers
 }
 
-export async function PUT(request: NextRequest) {
-  return handleProxy(request, 'PUT')
+const parseBody = async (request: NextRequest): Promise<BodyInit | undefined> => {
+  if (request.method === 'GET' || request.method === 'DELETE') return undefined
+
+  const contentType = request.headers.get('content-type') || ''
+
+  if (contentType.includes('application/json')) {
+    const payload = await request.json()
+    return JSON.stringify(payload)
+  }
+
+  if (contentType.includes('application/x-www-form-urlencoded')) {
+    return await request.text()
+  }
+
+  if (contentType.includes('multipart/form-data')) {
+    const bytes = await request.arrayBuffer()
+    return bytes
+  }
+
+  return await request.text()
 }
 
-export async function DELETE(request: NextRequest) {
-  return handleProxy(request, 'DELETE')
-}
-
-async function handleProxy(request: NextRequest, method: string) {
+const proxy = async (request: NextRequest) => {
   try {
-    // Pegar a sessão do servidor
     const session = await getServerSession(options)
-    
+
     if (!session?.user?.token) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      )
+      return NextResponse.json({ success: false, message: 'Não autenticado' }, { status: 401 })
     }
 
-    // Extrair o path da URL
-    const url = new URL(request.url)
-    const path = url.pathname.replace('/api/proxy/', '')
-    const queryString = url.search
-    
-    // Construir URL da API externa
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/${path}${queryString}`
-    
-    console.log(`🔄 [Proxy] ${method} ${apiUrl}`)
+    const apiUrl = buildUpstreamUrl(request)
+    const headers = buildHeaders(request, session.user.token)
+    const body = await parseBody(request)
 
-    // Preparar headers
-    const headers: Record<string, string> = {
-      'Authorization': `Bearer ${session.user.token}`,
-      'Content-Type': 'application/json',
-    }
-
-    // Preparar body para métodos POST/PUT
-    let body: string | undefined
-    if (method === 'POST' || method === 'PUT') {
-      const contentType = request.headers.get('content-type')
-      if (contentType?.includes('application/json')) {
-        const jsonBody = await request.json()
-        body = JSON.stringify(jsonBody)
-      } else if (contentType?.includes('application/x-www-form-urlencoded')) {
-        const formData = await request.text()
-        body = formData
-        headers['Content-Type'] = 'application/x-www-form-urlencoded'
-      }
-    }
-
-    // Fazer requisição à API externa
     const response = await fetch(apiUrl, {
-      method,
+      method: request.method,
       headers,
       body,
+      cache: 'no-store',
     })
 
-    const data = await response.json()
+    const contentType = response.headers.get('content-type') || ''
 
-    if (!response.ok) {
-      console.error('❌ [Proxy] Erro da API:', data)
-      return NextResponse.json(
-        data,
-        { status: response.status }
-      )
+    if (!contentType.includes(JSON_CONTENT_TYPE)) {
+      const blob = await response.blob()
+      return new NextResponse(blob, {
+        status: response.status,
+        headers: {
+          'Content-Type': contentType || 'application/octet-stream',
+        },
+      })
     }
 
-    console.log('✅ [Proxy] Sucesso:', data)
-    return NextResponse.json(data)
-
+    const data = await response.json()
+    return NextResponse.json(data, { status: response.status })
   } catch (error) {
-    console.error('❌ [Proxy] Erro:', error)
+    console.error('[Proxy] erro', error)
     return NextResponse.json(
-      { error: 'Erro interno no proxy' },
+      { success: false, message: 'Erro interno no proxy' },
       { status: 500 }
     )
   }
+}
+
+export async function GET(request: NextRequest) {
+  return proxy(request)
+}
+
+export async function POST(request: NextRequest) {
+  return proxy(request)
+}
+
+export async function PUT(request: NextRequest) {
+  return proxy(request)
+}
+
+export async function PATCH(request: NextRequest) {
+  return proxy(request)
+}
+
+export async function DELETE(request: NextRequest) {
+  return proxy(request)
 }

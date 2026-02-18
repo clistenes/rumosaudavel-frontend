@@ -1,86 +1,64 @@
-import api from './api'
-import { ApiResponse } from '@/types/auth'
+import { http, API_ENDPOINTS } from './http.service'
+import type { ApiResponse } from '@/types/auth'
 
 export const participantesService = {
   async adicionarBatch(data: FormData) {
-    const response = await api.post<ApiResponse<{ criados: number; duplicados: string[]; total: number }>>(
-      '/adm/participantes/batch',
-      data,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }
-    )
-    return response.data
+    return http.post<{ criados: number; duplicados: string[]; total: number }>(
+      API_ENDPOINTS.participantes.importar,
+      data
+    ) as Promise<ApiResponse<{ criados: number; duplicados: string[]; total: number }>>
   },
 
   async obter(participanteId: number) {
-    const response = await api.get<ApiResponse<any>>(`/adm/participantes/${participanteId}`)
-    return response.data
+    return http.get<unknown>(API_ENDPOINTS.participantes.get(participanteId)) as Promise<ApiResponse<unknown>>
   },
 
   async obterDadosPessoais(participanteId: number) {
-    const response = await api.get<ApiResponse<any[]>>(`/adm/participantes/${participanteId}/dados-pessoais`)
-    return response.data
+    return http.get<unknown[]>(API_ENDPOINTS.participantes.dadosPessoais(participanteId)) as Promise<ApiResponse<unknown[]>>
   },
 
   async obterHistoricoCoaching(participanteId: number) {
-    const response = await api.get<ApiResponse<any[]>>(`/adm/participantes/${participanteId}/historico-coaching`)
-    return response.data
+    return http.get<unknown[]>(API_ENDPOINTS.participantes.historicoCoaching(participanteId)) as Promise<ApiResponse<unknown[]>>
   },
 
   async adicionarHistoricoCoaching(participanteId: number, data: FormData) {
-    const response = await api.post<ApiResponse<any>>(
-      `/adm/participantes/${participanteId}/historico-coaching`,
-      data,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }
-    )
-    return response.data
+    return http.post<unknown>(API_ENDPOINTS.participantes.historicoCoaching(participanteId), data) as Promise<ApiResponse<unknown>>
   },
 
   async atualizarHistoricoCoaching(historicoId: number, data: FormData) {
-    const response = await api.put<ApiResponse<any>>(
-      `/adm/historico-coaching/${historicoId}`,
-      data,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }
-    )
-    return response.data
+    return http.put<unknown>(API_ENDPOINTS.participantes.deleteHistoricoCoaching(historicoId), data) as Promise<ApiResponse<unknown>>
   },
 
   async deletarHistoricoCoaching(historicoId: number) {
-    const response = await api.delete<ApiResponse<void>>(`/adm/historico-coaching/${historicoId}`)
-    return response.data
+    return http.delete<void>(API_ENDPOINTS.participantes.deleteHistoricoCoaching(historicoId)) as Promise<ApiResponse<void>>
   },
 
   async obterContatos(participanteId: number) {
-    const response = await api.get<ApiResponse<any[]>>(`/adm/participantes/${participanteId}/contatos`)
-    return response.data
+    return http.get<unknown[]>(API_ENDPOINTS.participantes.contatos(participanteId)) as Promise<ApiResponse<unknown[]>>
   },
 
-  async adicionarContato(participanteId: number, data: { data: string; hora_inicio: string; hora_final: string; tipo_contato: string; contato: string }) {
-    const response = await api.post<ApiResponse<any>>(`/adm/participantes/${participanteId}/contatos`, data)
-    return response.data
+  async adicionarContato(
+    participanteId: number,
+    data: { data: string; hora_inicio: string; hora_final: string; tipo_contato: string; contato: string }
+  ) {
+    return http.post<unknown>(API_ENDPOINTS.participantes.contatos(participanteId), data) as Promise<ApiResponse<unknown>>
   },
 
   async deletarContato(contatoId: number) {
-    const response = await api.delete<ApiResponse<void>>(`/adm/contatos/${contatoId}`)
-    return response.data
+    return http.delete<void>(API_ENDPOINTS.participantes.deleteContato(contatoId)) as Promise<ApiResponse<void>>
   },
 
   async simularAcesso(participanteId: number) {
-    const response = await api.post<ApiResponse<{ token: string; user: any }>>(
-      `/adm/participantes/${participanteId}/simular-acesso`
-    )
-    return response.data
+    return http.post<{ token: string; user: unknown }>(API_ENDPOINTS.participantes.simularAcesso(participanteId), {}) as Promise<
+      ApiResponse<{ token: string; user: unknown }>
+    >
   },
 
   async pesquisarUsuarios(search?: string, page: number = 1, perPage: number = 20) {
-    const response = await api.get<ApiResponse<any[]>>('/adm/pesquisar-usuarios', {
-      params: { search, page, per_page: perPage },
-    })
-    return response.data
+    const query = new URLSearchParams()
+    if (search) query.append('search', search)
+    query.append('page', String(page))
+    query.append('per_page', String(perPage))
+    return http.get<unknown[]>(`${API_ENDPOINTS.participantes.pesquisarUsuarios}?${query.toString()}`) as Promise<ApiResponse<unknown[]>>
   },
 }

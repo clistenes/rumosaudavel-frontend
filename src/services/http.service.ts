@@ -1,140 +1,143 @@
 /**
- * Serviço HTTP base para requisições à API
- * 
- * Este serviço centraliza todas as chamadas HTTP, adicionando:
- * - Headers padrão (incluindo token de autenticação)
- * - Tratamento de erros
- * - Logs em ambiente de desenvolvimento
- * - Suporte ao modo demo
+ * Servico HTTP base para requisicoes a API
+ * Centraliza auth, parse de payload e normalizacao de resposta/erro.
  */
 
 import { API_CONFIG, API_ENDPOINTS } from './api.config'
-import type { ApiResponse, ApiError } from '@/types/api'
+import { normalizeApiError, normalizeApiResponse } from './api-normalizer'
+import type { ApiResponse } from '@/types/api'
 
-// Verifica se estamos no modo demo
 const isDemoMode = () => API_CONFIG.isDemo
 
-// Recupera o token do localStorage ou session
 const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null
   return localStorage.getItem('token') || sessionStorage.getItem('token')
 }
 
-// Configura os headers da requisição de forma síncrona (para compatibilidade)
 const getHeadersSync = (customHeaders?: Record<string, string>): Record<string, string> => {
   const headers: Record<string, string> = {
     ...API_CONFIG.headers,
-    ...customHeaders,
+    ...(customHeaders || {}),
   }
 
   const token = getAuthToken()
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`
+    headers.Authorization = `Bearer ${token}`
   }
 
   return headers
 }
 
-// Trata erros da API
-const handleError = async (response: Response): Promise<never> => {
-  let errorMessage = 'Erro na requisição'
-  let errors: ApiError[] = []
-
-  try {
-    const data = await response.json()
-    errorMessage = data.message || errorMessage
-    errors = data.errors || []
-  } catch {
-    errorMessage = `Erro ${response.status}: ${response.statusText}`
-  }
-
-  const error = new Error(errorMessage) as Error & { status: number; errors: ApiError[] }
-  error.status = response.status
-  error.errors = errors
-  
-  console.error('[API Error]', error)
-  throw error
+interface RequestOptions extends RequestInit {
+  parseAs?: 'json' | 'blob' | 'text' | 'raw'
 }
 
-// Função base para requisições HTTP
+const isSerializableObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' &&
+  value !== null &&
+  !(value instanceof FormData) &&
+  !(value instanceof URLSearchParams) &&
+  !(value instanceof Blob) &&
+  !(value instanceof ArrayBuffer)
+
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestOptions = {}
 ): Promise<ApiResponse<T>> {
-  // Se estiver em modo demo, retorna erro simulado ou usa dados mock
   if (isDemoMode() && !endpoint.startsWith('/api/demo')) {
-    console.log('[DEMO MODE] Requisição simulada:', endpoint)
-    // Em modo demo, não fazemos requisições reais
-    // Os dados são mockados nos hooks/serviços específicos
-    throw new Error('Modo demo: Use os dados mockados')
+    throw new Error('Modo demo: use dados mockados')
   }
 
   const url = `${API_CONFIG.baseURL}${endpoint}`
-  
+  const { parseAs = 'json', ...fetchOptions } = options
+
+  let body = fetchOptions.body
+  const headers = getHeadersSync(fetchOptions.headers as Record<string, string> | undefined)
+
+  if (isSerializableObject(body)) {
+    body = JSON.stringify(body)
+  }
+
+  if (body instanceof FormData) {
+    delete headers['Content-Type']
+  } else if (body instanceof URLSearchParams) {
+    headers['Content-Type'] = 'application/x-www-form-urlencoded'
+    body = body.toString()
+  }
+
   const config: RequestInit = {
-    ...options,
-    headers: getHeadersSync(options.headers as Record<string, string>),
+    ...fetchOptions,
+    body,
+    headers,
   }
 
   try {
     const response = await fetch(url, config)
 
     if (!response.ok) {
-      await handleError(response)
+      throw await normalizeApiError(response)
     }
 
-    const data: ApiResponse<T> = await response.json()
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[API Success]', endpoint, data)
+    if (parseAs === 'raw') {
+      return normalizeApiResponse<T>(response)
     }
 
-    return data
+    if (parseAs === 'blob') {
+      return normalizeApiResponse<T>(await response.blob())
+    }
+
+    if (parseAs === 'text') {
+      return normalizeApiResponse<T>(await response.text())
+    }
+
+    const contentType = response.headers.get('content-type') || ''
+    const payload = contentType.includes('application/json')
+      ? await response.json()
+      : await response.text()
+
+    return normalizeApiResponse<T>(payload)
   } catch (error) {
-    console.error('[API Request Failed]', error)
+    console.error('[API Request Failed]', endpoint, error)
     throw error
   }
 }
 
-// Métodos HTTP
 export const http = {
-  get: <T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> =>
+  get: <T>(endpoint: string, options?: RequestOptions): Promise<ApiResponse<T>> =>
     request<T>(endpoint, { ...options, method: 'GET' }),
 
-  post: <T>(endpoint: string, body: unknown, options?: RequestInit): Promise<ApiResponse<T>> =>
+  post: <T>(endpoint: string, body: unknown, options?: RequestOptions): Promise<ApiResponse<T>> =>
     request<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: JSON.stringify(body),
+      body: body as BodyInit,
     }),
 
-  put: <T>(endpoint: string, body: unknown, options?: RequestInit): Promise<ApiResponse<T>> =>
+  put: <T>(endpoint: string, body: unknown, options?: RequestOptions): Promise<ApiResponse<T>> =>
     request<T>(endpoint, {
       ...options,
       method: 'PUT',
-      body: JSON.stringify(body),
+      body: body as BodyInit,
     }),
 
-  patch: <T>(endpoint: string, body: unknown, options?: RequestInit): Promise<ApiResponse<T>> =>
+  patch: <T>(endpoint: string, body: unknown, options?: RequestOptions): Promise<ApiResponse<T>> =>
     request<T>(endpoint, {
       ...options,
       method: 'PATCH',
-      body: JSON.stringify(body),
+      body: body as BodyInit,
     }),
 
-  delete: <T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> =>
+  delete: <T>(endpoint: string, options?: RequestOptions): Promise<ApiResponse<T>> =>
     request<T>(endpoint, { ...options, method: 'DELETE' }),
 }
 
-// Exporta também os endpoints e configurações
 export { API_CONFIG, API_ENDPOINTS }
 
-// Helper para construir query strings
 export const buildQueryString = (params: Record<string, unknown>): string => {
   const query = Object.entries(params)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     .join('&')
-  
+
   return query ? `?${query}` : ''
 }

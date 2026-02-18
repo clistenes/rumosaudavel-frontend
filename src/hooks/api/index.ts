@@ -44,3 +44,11 @@ export {
   usePerguntasQuestionario,
   useResponderQuestionario,
 } from './useQuestionarios'
+
+export {
+  useUsuarios,
+  useUsuario,
+  useCriarUsuario,
+  useAtualizarUsuario,
+  useRemoverUsuario,
+} from './useUsuarios'

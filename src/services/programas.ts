@@ -1,76 +1,56 @@
-import api from './api'
-import { ApiResponse } from '@/types/auth'
+import { http, API_ENDPOINTS } from './http.service'
+import type { ApiResponse } from '@/types/auth'
 
 export const programasService = {
   async listar() {
-    const response = await api.get<ApiResponse<any[]>>('/adm/programas')
-    return response.data
+    return http.get<unknown[]>(API_ENDPOINTS.programas.list) as Promise<ApiResponse<unknown[]>>
   },
 
   async obter(id: number) {
-    const response = await api.get<ApiResponse<any>>(`/adm/programas/${id}`)
-    return response.data
+    return http.get<unknown>(API_ENDPOINTS.programas.get(id)) as Promise<ApiResponse<unknown>>
   },
 
   async criar(data: { nome: string; introducao?: string; questionarios?: number[]; ordenacao_questionarios?: string }) {
-    const response = await api.post<ApiResponse<any>>('/adm/programas', data)
-    return response.data
+    return http.post<unknown>(API_ENDPOINTS.programas.create, data) as Promise<ApiResponse<unknown>>
   },
 
   async atualizar(id: number, data: { nome?: string; introducao?: string; questionarios?: number[]; ordenacao_questionarios?: string }) {
-    const response = await api.put<ApiResponse<any>>(`/adm/programas/${id}`, data)
-    return response.data
+    return http.put<unknown>(API_ENDPOINTS.programas.update(id), data) as Promise<ApiResponse<unknown>>
   },
 
   async deletar(id: number) {
-    const response = await api.delete<ApiResponse<void>>(`/adm/programas/${id}`)
-    return response.data
+    return http.delete<void>(API_ENDPOINTS.programas.delete(id)) as Promise<ApiResponse<void>>
   },
 
   async duplicar(id: number) {
-    const response = await api.post<ApiResponse<any>>(`/adm/programas/${id}/duplicar`)
-    return response.data
+    return http.post<unknown>(API_ENDPOINTS.programas.duplicar(id), {}) as Promise<ApiResponse<unknown>>
   },
 
   async vincularEmpresa(programaId: number, empresaId: number) {
-    const response = await api.post<ApiResponse<any>>(`/adm/programas/${programaId}/empresas`, {
+    return http.post<unknown>(API_ENDPOINTS.programas.vincularEmpresa(programaId), {
       id_empresa: empresaId,
-    })
-    return response.data
+    }) as Promise<ApiResponse<unknown>>
   },
 
   async removerVinculoEmpresa(programaId: number, empresaId: number) {
-    const response = await api.delete<ApiResponse<void>>(`/adm/programas/${programaId}/empresas/${empresaId}`)
-    return response.data
+    return http.delete<void>(
+      API_ENDPOINTS.programas.removerVinculoEmpresa(programaId, empresaId)
+    ) as Promise<ApiResponse<void>>
   },
 
   async configurarIntervalo(programaId: number, empresaId: number, data: { intervalo_inicio: string; intervalo_termino: string }) {
-    const response = await api.post<ApiResponse<void>>(
-      `/adm/programas/${programaId}/empresas/${empresaId}/intervalo`,
-      data
-    )
-    return response.data
+    return http.post<void>(API_ENDPOINTS.programas.intervaloEmpresa(programaId, empresaId), data) as Promise<ApiResponse<void>>
   },
 
   async tornarIndeterminado(programaId: number, empresaId: number) {
-    const response = await api.delete<ApiResponse<void>>(
-      `/adm/programas/${programaId}/empresas/${empresaId}/intervalo`
-    )
-    return response.data
+    return http.delete<void>(API_ENDPOINTS.programas.intervaloEmpresa(programaId, empresaId)) as Promise<ApiResponse<void>>
   },
 
   async listarAcessos(empresaId: number, programaId: number) {
-    const response = await api.get<ApiResponse<any[]>>(
-      `/adm/empresas/${empresaId}/programas/${programaId}/acessos`
-    )
-    return response.data
+    return http.get<unknown[]>(API_ENDPOINTS.programas.acessosEmpresaPrograma(empresaId, programaId)) as Promise<ApiResponse<unknown[]>>
   },
 
   async atualizarAcesso(empresaId: number, programaId: number, data: { id_user: number; tem_acesso: boolean }) {
-    const response = await api.post<ApiResponse<void>>(
-      `/adm/empresas/${empresaId}/programas/${programaId}/acessos`,
-      data
-    )
-    return response.data
+    return http.post<void>(API_ENDPOINTS.programas.acessosEmpresaPrograma(empresaId, programaId), data) as Promise<ApiResponse<void>>
   },
 }

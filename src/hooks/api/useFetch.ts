@@ -1,12 +1,10 @@
 /**
- * Hook para buscar dados da API
- * 
- * Uso:
- * const { data, loading, error, refetch } = useFetch(() => empresaService.listar())
+ * Hooks base para query/mutation com envelope de API normalizado.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { ApiResponse } from '@/types/api'
+import type { ApiMeta, ApiResponse, PaginatedResponse } from '@/types/api'
+import { normalizeApiResponse } from '@/services/api-normalizer'
 
 interface UseFetchState<T> {
   data: T | null
@@ -33,26 +31,25 @@ export function useFetch<T>(
   fetchFnRef.current = fetchFn
 
   const fetchData = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }))
-    
+    setState((prev) => ({ ...prev, loading: true, error: null }))
+
     try {
-      console.log('🌐 [useFetch] Iniciando requisição...')
-      const response = await fetchFnRef.current()
-      console.log('🌐 [useFetch] Resposta:', response)
+      const rawResponse = await fetchFnRef.current()
+      const response = normalizeApiResponse<T>(rawResponse as unknown)
+
       setState({
         data: response.data,
         loading: false,
         error: null,
       })
     } catch (err) {
-      console.error('🌐 [useFetch] Erro:', err)
       setState({
         data: null,
         loading: false,
         error: err instanceof Error ? err : new Error('Erro desconhecido'),
       })
     }
-  }, []) // Empty deps - fetchFnRef is stable
+  }, [])
 
   useEffect(() => {
     if (immediate) {
@@ -63,19 +60,9 @@ export function useFetch<T>(
   return {
     ...state,
     refetch: fetchData,
-    setData: (data: T | null) => setState(prev => ({ ...prev, data })),
+    setData: (data: T | null) => setState((prev) => ({ ...prev, data })),
   }
 }
-
-/**
- * Hook para operações de mutation (POST, PUT, DELETE)
- * 
- * Uso:
- * const { mutate, loading, error } = useMutation((data) => empresaService.criar(data))
- * 
- * // Depois no handler:
- * await mutate({ nome: 'Empresa Teste' })
- */
 
 interface UseMutationReturn<T, V> {
   mutate: (variables: V) => Promise<T | null>
@@ -99,22 +86,21 @@ export function useMutation<T, V = unknown>(
   const mutate = useCallback(async (variables: V): Promise<T | null> => {
     setLoading(true)
     setError(null)
-    
+
     try {
-      const response = await mutationFn(variables)
+      const rawResponse = await mutationFn(variables)
+      const response = normalizeApiResponse<T>(rawResponse as unknown)
       setLoading(false)
       return response.data
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Erro desconhecido')
-      setError(error)
+      const mutationError = err instanceof Error ? err : new Error('Erro desconhecido')
+      setError(mutationError)
       setLoading(false)
       return null
     }
   }, [mutationFn])
 
-  const mutateAsync = useCallback(async (variables: V): Promise<T | null> => {
-    return mutate(variables)
-  }, [mutate])
+  const mutateAsync = useCallback(async (variables: V): Promise<T | null> => mutate(variables), [mutate])
 
   return {
     mutate,
@@ -124,17 +110,6 @@ export function useMutation<T, V = unknown>(
     reset,
   }
 }
-
-/**
- * Hook para paginação
- * 
- * Uso:
- * const { data, meta, loading, nextPage, prevPage, goToPage } = usePaginatedFetch(
- *   (page) => empresaService.listar({ page })
- * )
- */
-
-import type { PaginatedResponse, ApiMeta } from '@/types/api'
 
 interface UsePaginatedFetchReturn<T> extends UseFetchState<PaginatedResponse<T>> {
   meta: ApiMeta | null
@@ -167,13 +142,13 @@ export function usePaginatedFetch<T>(
 
   const nextPage = useCallback(() => {
     if (meta && page < meta.totalPages) {
-      setPage(p => p + 1)
+      setPage((prev) => prev + 1)
     }
   }, [meta, page])
 
   const prevPage = useCallback(() => {
     if (page > 1) {
-      setPage(p => p - 1)
+      setPage((prev) => prev - 1)
     }
   }, [page])
 
