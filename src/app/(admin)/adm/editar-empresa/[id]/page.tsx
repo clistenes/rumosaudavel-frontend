@@ -11,10 +11,61 @@ import { useEmpresa, useAtualizarEmpresa, useRemoverEmpresa } from '@/hooks/api/
 import { useNotificationContext } from '@/context/useNotificationContext'
 import { isDemoMode } from '@/utils/env'
 
+const normalizeEmpresa = (empresa: any) => {
+  if (!empresa) return null
+
+  const nome = empresa.nome || empresa.empresa_nome || ''
+  const slug =
+    empresa.slug ||
+    empresa.empresa_slug ||
+    (typeof nome === 'string'
+      ? nome
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      : '')
+
+  const introducao = empresa.introducao || empresa.empresa_introducao || ''
+  const cor = empresa.cor || empresa.empresa_cor || '#FF6600'
+  const cnpj = empresa.cnpj || empresa.empresa_cnpj || ''
+  const email = empresa.email || empresa.empresa_email || ''
+  const telefone = empresa.telefone || empresa.empresa_telefone || ''
+  const cidade = empresa.cidade || empresa.empresa_cidade || ''
+  const estado = empresa.estado || empresa.empresa_estado || ''
+  const termoRaw = empresa.termoConsentimento ?? empresa.empresa_termo
+  const termoConsentimento = typeof termoRaw === 'string'
+    ? termoRaw === 'on' || termoRaw === 'true' || termoRaw === '1'
+    : termoRaw ?? true
+
+  const status = empresa.status || (empresa.ativo ? 'ativo' : 'inativo')
+
+  return {
+    ...empresa,
+    nome,
+    slug,
+    introducao,
+    cor,
+    cnpj,
+    email,
+    telefone,
+    cidade,
+    estado,
+    termoConsentimento,
+    status,
+    participantesCount: empresa.participantes ?? empresa.totalParticipantes ?? 0,
+    riscoAltoCount: empresa.riscoAlto ?? 0,
+    adesaoPercentual: empresa.adesao ?? 0,
+    dataCadastroFormatada: empresa.dataCadastro || empresa.dataCriacao || empresa.created_at || null,
+  }
+}
+
 export default function EditarEmpresa() {
   const router = useRouter()
   const params = useParams()
-  const empresaId = parseInt(params.id as string)
+  const rawId = Array.isArray(params.id) ? params.id[0] : params.id
+  const empresaId = Number(rawId)
   const { showNotification } = useNotificationContext()
   const demoMode = isDemoMode()
   const demoContext = useDemo()
@@ -23,13 +74,21 @@ export default function EditarEmpresa() {
   const { mutateAsync: atualizarEmpresa, loading: salvando } = useAtualizarEmpresa()
   const { mutateAsync: removerEmpresa, loading: removendo } = useRemoverEmpresa()
 
-  const empresaDemo = demoMode ? demoContext.empresas.find((e: any) => e.id === empresaId) : null
+  const empresaDemo = demoMode
+    ? demoContext.empresas.find((empresa: any) => String(empresa.id) === String(rawId))
+    : null
+  const empresaIdResolvido = Number(empresaDemo?.id ?? empresaId)
   const empresaApi: any = empresaData
-  const empresa = demoMode ? empresaDemo : empresaApi
+  const empresaNormalizada = normalizeEmpresa(demoMode ? empresaDemo : empresaApi)
 
   const [activeTab, setActiveTab] = useState('dados')
   const [nome, setNome] = useState('')
   const [slug, setSlug] = useState('')
+  const [cnpj, setCnpj] = useState('')
+  const [email, setEmail] = useState('')
+  const [telefone, setTelefone] = useState('')
+  const [cidade, setCidade] = useState('')
+  const [estado, setEstado] = useState('')
   const [introducao, setIntroducao] = useState('')
   const [cor, setCor] = useState('#FF6600')
   const [termoConsentimento, setTermoConsentimento] = useState(true)
@@ -45,22 +104,33 @@ export default function EditarEmpresa() {
   const [filtroHeatmap2, setFiltroHeatmap2] = useState('')
 
   useEffect(() => {
-    if (!empresa) return
+    if (!empresaNormalizada) return
 
-    setNome(empresa.nome || '')
-    setSlug(empresa.slug || '')
-    setIntroducao(empresa.introducao || '')
-    setCor(empresa.cor || '#FF6600')
-    setTermoConsentimento(empresa.termoConsentimento ?? true)
-    setStatus(empresa.status || (empresa.ativo ? 'ativo' : 'inativo'))
-  }, [empresa])
+    setNome(empresaNormalizada.nome)
+    setSlug(empresaNormalizada.slug)
+    setCnpj(empresaNormalizada.cnpj || '')
+    setEmail(empresaNormalizada.email || '')
+    setTelefone(empresaNormalizada.telefone || '')
+    setCidade(empresaNormalizada.cidade || '')
+    setEstado(empresaNormalizada.estado || '')
+    setIntroducao(empresaNormalizada.introducao)
+    setCor(empresaNormalizada.cor)
+    setTermoConsentimento(empresaNormalizada.termoConsentimento)
+    setStatus(empresaNormalizada.status)
+    setEmailEmpresa(empresaNormalizada.email || '')
+  }, [empresaNormalizada])
 
   const handleSalvar = async () => {
     try {
       if (demoMode) {
-        demoContext.updateEmpresa(empresaId, {
+        demoContext.updateEmpresa(empresaIdResolvido, {
           nome,
           slug,
+          cnpj,
+          email,
+          telefone,
+          cidade,
+          estado,
           introducao,
           cor,
           termoConsentimento,
@@ -72,7 +142,7 @@ export default function EditarEmpresa() {
       }
 
       await atualizarEmpresa({
-        id: empresaId,
+        id: empresaIdResolvido,
         data: {
           empresa_nome: nome,
           empresa_introducao: introducao,
@@ -89,14 +159,14 @@ export default function EditarEmpresa() {
   }
 
   const handleExcluir = async () => {
-    const confirmed = window.confirm(`Tem certeza que deseja excluir a empresa "${empresa?.nome}"?`)
+    const confirmed = window.confirm(`Tem certeza que deseja excluir a empresa "${empresaNormalizada?.nome}"?`)
     if (!confirmed) return
 
     try {
       if (demoMode) {
-        demoContext.deleteEmpresa(empresaId)
+        demoContext.deleteEmpresa(empresaIdResolvido)
       } else {
-        await removerEmpresa(empresaId)
+        await removerEmpresa(empresaIdResolvido)
       }
 
       showNotification({ message: 'Empresa excluída com sucesso!', variant: 'success' })
@@ -143,7 +213,7 @@ export default function EditarEmpresa() {
     )
   }
 
-  if (!empresa) {
+  if (!empresaNormalizada) {
     return (
       <>
         <PageTitle title='Editar Empresa' subName='Empresas' />
@@ -173,6 +243,41 @@ export default function EditarEmpresa() {
                     <Form.Text className='text-muted'>URL: https://rumosaudavel.com/portal/{slug}</Form.Text>
                   </Form.Group>
 
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className='mb-3'>
+                        <Form.Label>CNPJ</Form.Label>
+                        <Form.Control type='text' value={cnpj} onChange={(e) => setCnpj(e.target.value)} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className='mb-3'>
+                        <Form.Label>Email</Form.Label>
+                        <Form.Control type='email' value={email} onChange={(e) => setEmail(e.target.value)} />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className='mb-3'>
+                        <Form.Label>Telefone</Form.Label>
+                        <Form.Control type='text' value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group className='mb-3'>
+                        <Form.Label>Cidade</Form.Label>
+                        <Form.Control type='text' value={cidade} onChange={(e) => setCidade(e.target.value)} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={2}>
+                      <Form.Group className='mb-3'>
+                        <Form.Label>UF</Form.Label>
+                        <Form.Control type='text' value={estado} onChange={(e) => setEstado(e.target.value.toUpperCase())} maxLength={2} />
+                      </Form.Group>
+                    </Col>
+                  </Row>
                   <Form.Group className='mb-3'>
                     <Form.Label>Introdução</Form.Label>
                     <Form.Control as='textarea' rows={4} value={introducao} onChange={(e) => setIntroducao(e.target.value)} />
@@ -212,19 +317,19 @@ export default function EditarEmpresa() {
                       <h6>Estatísticas</h6>
                       <div className='mb-2'>
                         <small className='text-muted'>Total de Participantes:</small>
-                        <div className='fs-4 fw-bold'>{empresa.participantes || 0}</div>
+                        <div className='fs-4 fw-bold'>{empresaNormalizada.participantesCount}</div>
                       </div>
                       <div className='mb-2'>
                         <small className='text-muted'>Risco Alto:</small>
-                        <div className='fs-4 fw-bold text-danger'>{empresa.riscoAlto || 0}</div>
+                        <div className='fs-4 fw-bold text-danger'>{empresaNormalizada.riscoAltoCount}</div>
                       </div>
                       <div className='mb-2'>
                         <small className='text-muted'>Taxa de Adesão:</small>
-                        <div className='fs-4 fw-bold text-info'>{empresa.adesao || 0}%</div>
+                        <div className='fs-4 fw-bold text-info'>{empresaNormalizada.adesaoPercentual}%</div>
                       </div>
                       <div className='mb-0'>
                         <small className='text-muted'>Cadastrado em:</small>
-                        <div>{empresa.dataCadastro ? new Date(empresa.dataCadastro).toLocaleDateString('pt-BR') : '-'}</div>
+                        <div>{empresaNormalizada.dataCadastroFormatada ? new Date(empresaNormalizada.dataCadastroFormatada).toLocaleDateString('pt-BR') : '-'}</div>
                       </div>
                     </Card.Body>
                   </Card>
@@ -376,3 +481,4 @@ export default function EditarEmpresa() {
     </>
   )
 }
+

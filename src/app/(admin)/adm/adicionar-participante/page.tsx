@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Card, Form, Button, Row, Col, Alert, Badge, Table, Tabs, Tab, Spinner } from 'react-bootstrap'
+import { Card, Form, Button, Row, Col, Alert, Table, Tabs, Tab, Spinner } from 'react-bootstrap'
 import { useRouter, useSearchParams } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
@@ -9,13 +9,17 @@ import FileUpload from '@/components/FileUpload'
 import { useEmpresas } from '@/hooks/api/useEmpresas'
 import { useImportarParticipantesTexto, useImportarParticipantesExcel } from '@/hooks/api/useParticipantes'
 import { useNotificationContext } from '@/context/useNotificationContext'
+import { useDemo } from '@/context/DemoContext'
+import { isDemoMode } from '@/utils/env'
 
 export default function AdicionarParticipante() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const empresaParam = searchParams.get('empresa')
   const { showNotification } = useNotificationContext()
-  
+  const demoMode = isDemoMode()
+  const demoContext = useDemo()
+
   const [activeTab, setActiveTab] = useState('texto')
   const [empresaSelecionada, setEmpresaSelecionada] = useState(empresaParam || '')
   const [senhaPadrao, setSenhaPadrao] = useState('')
@@ -28,62 +32,163 @@ export default function AdicionarParticipante() {
     total: number
   } | null>(null)
 
-  // Buscar empresas do backend
   const { data: empresasData, loading: loadingEmpresas } = useEmpresas({ perPage: 1000 })
-  const empresas = empresasData?.data || []
+  const empresas = demoMode ? demoContext.empresas : (empresasData?.data || [])
 
-  // Hooks de mutação
   const { mutateAsync: importarTexto, loading: loadingTexto } = useImportarParticipantesTexto()
   const { mutateAsync: importarExcel, loading: loadingExcel } = useImportarParticipantesExcel()
 
-  const processando = loadingTexto || loadingExcel
+  const processando = !demoMode && (loadingTexto || loadingExcel)
 
   const processarLogins = useCallback((texto: string): string[] => {
     return texto
       .split(/[,;\n]+/)
-      .map(l => l.trim())
-      .filter(l => l.length > 0)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+  }, [])
+
+  const normalizarLogin = useCallback((valor: string): string => {
+    const bruto = valor.trim().toLowerCase()
+    if (!bruto) return ''
+    return bruto.includes('@') ? bruto.split('@')[0] : bruto
+  }, [])
+
+  const formatarNomePorLogin = useCallback((login: string): string => {
+    return login
+      .replace(/[._-]+/g, ' ')
+      .split(' ')
+      .filter(Boolean)
+      .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
+      .join(' ')
+  }, [])
+
+  const extrairLoginsArquivoDemo = useCallback(async (arquivo: File): Promise<string[]> => {
+    const extensao = arquivo.name.split('.').pop()?.toLowerCase() || ''
+    if (!['csv', 'txt'].includes(extensao)) {
+      throw new Error('No modo demo, use arquivo CSV ou TXT.')
+    }
+
+    const conteudo = await arquivo.text()
+    return conteudo
+      .split(/\r?\n/)
+      .flatMap((linha) => linha.split(/[;,]/))
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+      .filter((item) => {
+        const valor = item.toLowerCase()
+        return valor !== 'login' && valor !== 'email'
+      })
   }, [])
 
   const handleTextoChange = (texto: string) => {
     setLoginsTexto(texto)
     const logins = processarLogins(texto)
-    setPreview(logins.slice(0, 10)) // Mostra primeiros 10
+    setPreview(logins.slice(0, 10))
   }
 
   const handleProcessar = async () => {
     if (!empresaSelecionada) {
-      alert('Selecione uma empresa!')
-      return
-    }
-
-    const logins = activeTab === 'texto' 
-      ? processarLogins(loginsTexto)
-      : [] // TODO: processar Excel
-
-    if (logins.length === 0 && arquivoExcel.length === 0) {
-      alert('Informe pelo menos um login ou faça upload de um arquivo!')
+      showNotification({ message: 'Selecione uma empresa.', variant: 'warning' })
       return
     }
 
     try {
+      let logins: string[] = []
+
+      if (activeTab === 'texto') {
+        logins = processarLogins(loginsTexto)
+      } else if (arquivoExcel.length > 0 && demoMode) {
+        logins = await extrairLoginsArquivoDemo(arquivoExcel[0])
+      }
+
+      if (logins.length === 0 && arquivoExcel.length === 0) {
+        showNotification({ message: 'Informe ao menos um login ou envie um arquivo.', variant: 'warning' })
+        return
+      }
+
+      if (demoMode) {
+        const empresaId = parseInt(empresaSelecionada)
+        const empresaAtual = demoContext.empresas.find((empresa: any) => empresa.id === empresaId)
+        const dominioEmpresa =
+          empresaAtual?.email?.split('@')?.[1] ||
+          `${String(empresaAtual?.nome || 'empresa').toLowerCase().replace(/[^a-z0-9]+/g, '')}.com.br`
+
+        const loginsExistentes = new Set(
+          demoContext.participantes
+            .map((participante: any) => normalizarLogin(participante.login || participante.email || ''))
+            .filter(Boolean)
+        )
+
+        const loginsLote = new Set<string>()
+        const duplicados: string[] = []
+        let criados = 0
+
+        logins.forEach((loginOriginal, index) => {
+          const login = normalizarLogin(loginOriginal)
+          if (!login) return
+
+          if (loginsExistentes.has(login) || loginsLote.has(login)) {
+            duplicados.push(login)
+            return
+          }
+
+          loginsLote.add(login)
+          const nomeFormatado = formatarNomePorLogin(login)
+          const sufixo = String(Date.now() + index).slice(-6)
+
+          demoContext.addParticipante({
+            empresaId,
+            login,
+            nome: nomeFormatado || `Participante ${index + 1}`,
+            cpf: `000.000.${sufixo.slice(0, 3)}-${sufixo.slice(3)}`,
+            email: `${login}@${dominioEmpresa}`,
+            telefone: '',
+            cargo: 'Colaborador',
+            departamento: 'Geral',
+            dataNascimento: '1990-01-01',
+            dataAdmissao: new Date().toISOString().split('T')[0],
+            sexo: 'N/A',
+            estadoCivil: 'Nao informado',
+            cidade: empresaAtual?.cidade || '',
+            estado: empresaAtual?.estado || '',
+            status: 'ativo',
+            riscoSaude: 'baixo',
+            phq9Score: 0,
+            gad7Score: 0,
+            ultimaAvaliacao: '',
+            alertasPendentes: 0,
+          })
+
+          criados += 1
+        })
+
+        setResultado({
+          criados,
+          duplicados,
+          total: logins.length,
+        })
+
+        showNotification({
+          message: `${criados} participantes importados no modo demo.`,
+          variant: criados > 0 ? 'success' : 'warning',
+        })
+
+        return
+      }
+
       let response
 
       if (activeTab === 'texto') {
-        // Importar via texto/CSV
         response = await importarTexto({
           texto: loginsTexto,
           empresaId: parseInt(empresaSelecionada),
-          formato: 'lista'
+          formato: 'lista',
         })
-      } else {
-        // Importar via Excel
-        if (arquivoExcel.length > 0) {
-          response = await importarExcel({
-            arquivo: arquivoExcel[0],
-            empresaId: parseInt(empresaSelecionada)
-          })
-        }
+      } else if (arquivoExcel.length > 0) {
+        response = await importarExcel({
+          arquivo: arquivoExcel[0],
+          empresaId: parseInt(empresaSelecionada),
+        })
       }
 
       if (response) {
@@ -95,50 +200,60 @@ export default function AdicionarParticipante() {
 
         showNotification({
           message: `${(response as any).importados || (response as any).criados || 0} participantes importados com sucesso!`,
-          variant: 'success'
+          variant: 'success',
         })
       }
-    } catch (error) {
+    } catch {
       showNotification({
         message: 'Erro ao importar participantes. Tente novamente.',
-        variant: 'danger'
+        variant: 'danger',
       })
     }
   }
 
   const handleUploadExcel = (files: File[]) => {
     setArquivoExcel(files)
-    // Aqui processaria o Excel e mostraria preview
+    if (!demoMode || files.length === 0) return
+
+    extrairLoginsArquivoDemo(files[0])
+      .then((logins) => setPreview(logins.slice(0, 10)))
+      .catch((error) => {
+        setPreview([])
+        showNotification({
+          message: error instanceof Error ? error.message : 'Arquivo invalido para modo demo.',
+          variant: 'warning',
+        })
+      })
   }
 
   return (
     <>
-      <PageTitle title="Adicionar Participantes" subName="Participantes" />
+      <PageTitle title='Adicionar Participantes' subName='Participantes' />
 
       {resultado && (
-        <Alert variant="success" className="mb-4">
+        <Alert variant='success' className='mb-4'>
           <Alert.Heading>
-            <IconifyIcon icon="iconoir:check-circle" className="me-2" />
-            Processamento Concluído!
+            <IconifyIcon icon='iconoir:check-circle' className='me-2' />
+            Processamento Concluido!
           </Alert.Heading>
-          <div className="d-flex gap-4 mt-3">
-            <div className="text-center">
-              <h4 className="text-success mb-0">{resultado.criados}</h4>
+          <div className='d-flex gap-4 mt-3'>
+            <div className='text-center'>
+              <h4 className='text-success mb-0'>{resultado.criados}</h4>
               <small>Participantes criados</small>
             </div>
-            <div className="text-center">
-              <h4 className="text-warning mb-0">{resultado.duplicados.length}</h4>
+            <div className='text-center'>
+              <h4 className='text-warning mb-0'>{resultado.duplicados.length}</h4>
               <small>Duplicados (ignorados)</small>
             </div>
-            <div className="text-center">
-              <h4 className="mb-0">{resultado.total}</h4>
+            <div className='text-center'>
+              <h4 className='mb-0'>{resultado.total}</h4>
               <small>Total processado</small>
             </div>
           </div>
           {resultado.duplicados.length > 0 && (
-            <div className="mt-3">
-              <small className="text-muted">Logins duplicados:</small>
-              <div className="small text-warning">
+            <div className='mt-3'>
+              <small className='text-muted'>Logins duplicados:</small>
+              <div className='small text-warning'>
                 {resultado.duplicados.slice(0, 5).join(', ')}
                 {resultado.duplicados.length > 5 && ` e mais ${resultado.duplicados.length - 5}...`}
               </div>
@@ -149,20 +264,20 @@ export default function AdicionarParticipante() {
 
       <Row>
         <Col md={8}>
-          <Card className="mb-4">
+          <Card className='mb-4'>
             <Card.Body>
-              <Form.Group className="mb-4">
-                <Form.Label className="fw-bold">Empresa *</Form.Label>
+              <Form.Group className='mb-4'>
+                <Form.Label className='fw-bold'>Empresa *</Form.Label>
                 <Form.Select
                   value={empresaSelecionada}
                   onChange={(e) => setEmpresaSelecionada(e.target.value)}
                   required
                   disabled={loadingEmpresas}
                 >
-                  <option value="">
+                  <option value=''>
                     {loadingEmpresas ? 'Carregando empresas...' : 'Selecione uma empresa...'}
                   </option>
-                  {empresas.map((emp: { id: number; nome: string }) => (
+                  {empresas.map((emp: any) => (
                     <option key={emp.id} value={emp.id}>{emp.nome}</option>
                   ))}
                 </Form.Select>
@@ -171,27 +286,27 @@ export default function AdicionarParticipante() {
               <Tabs
                 activeKey={activeTab}
                 onSelect={(k) => setActiveTab(k || 'texto')}
-                className="mb-4"
+                className='mb-4'
               >
-                <Tab eventKey="texto" title="Modo Texto">
-                  <Form.Group className="mb-3">
-                    <Form.Label>Logins (separados por vírgula, ponto-e-vírgula ou quebra de linha)</Form.Label>
+                <Tab eventKey='texto' title='Modo Texto'>
+                  <Form.Group className='mb-3'>
+                    <Form.Label>Logins (separados por virgula, ponto-e-virgula ou quebra de linha)</Form.Label>
                     <Form.Control
-                      as="textarea"
+                      as='textarea'
                       rows={8}
                       value={loginsTexto}
                       onChange={(e) => handleTextoChange(e.target.value)}
-                      placeholder="joao.silva&#10;maria.santos&#10;pedro.oliveira&#10;ana.costa"
+                      placeholder={'joao.silva\nmaria.santos\npedro.oliveira\nana.costa'}
                     />
-                    <Form.Text className="text-muted">
+                    <Form.Text className='text-muted'>
                       Exemplo: joao.silva, maria.santos, pedro.oliveira
                     </Form.Text>
                   </Form.Group>
 
                   {preview.length > 0 && (
-                    <Alert variant="info">
+                    <Alert variant='info'>
                       <strong>Preview:</strong> {preview.length > 10 ? `Mostrando 10 de ${processarLogins(loginsTexto).length} logins` : `${preview.length} logins encontrados`}
-                      <div className="mt-2 small">
+                      <div className='mt-2 small'>
                         {preview.join(', ')}
                         {processarLogins(loginsTexto).length > 10 && '...'}
                       </div>
@@ -199,17 +314,23 @@ export default function AdicionarParticipante() {
                   )}
                 </Tab>
 
-                <Tab eventKey="excel" title="Upload Excel">
-                  <Alert variant="info" className="mb-3">
-                    <IconifyIcon icon="iconoir:info-circle" className="me-2" />
-                    O arquivo Excel deve conter uma coluna chamada &quot;login&quot; com os logins dos participantes.
+                <Tab eventKey='excel' title='Upload Excel'>
+                  <Alert variant='info' className='mb-3'>
+                    <IconifyIcon icon='iconoir:info-circle' className='me-2' />
+                    No modo demo, use arquivo CSV/TXT com uma coluna de logins.
                   </Alert>
-                  
+
                   <FileUpload
-                    tipo="excel"
+                    tipo='excel'
                     maxSize={5}
                     onUpload={handleUploadExcel}
                   />
+
+                  {activeTab === 'excel' && preview.length > 0 && (
+                    <Alert variant='secondary' className='mt-3 mb-0'>
+                      <strong>Preview arquivo:</strong> {preview.join(', ')}
+                    </Alert>
+                  )}
                 </Tab>
               </Tabs>
             </Card.Body>
@@ -218,15 +339,15 @@ export default function AdicionarParticipante() {
           <Card>
             <Card.Body>
               <Form.Group>
-                <Form.Label className="fw-bold">Senha Padrão (opcional)</Form.Label>
+                <Form.Label className='fw-bold'>Senha Padrao (opcional)</Form.Label>
                 <Form.Control
-                  type="text"
+                  type='text'
                   value={senhaPadrao}
                   onChange={(e) => setSenhaPadrao(e.target.value)}
-                  placeholder="Deixe em branco para gerar automaticamente"
+                  placeholder='Deixe em branco para gerar automaticamente'
                 />
-                <Form.Text className="text-muted">
-                  Se não informada, será gerada uma senha aleatória para cada participante.
+                <Form.Text className='text-muted'>
+                  Se nao informada, sera gerada uma senha aleatoria para cada participante.
                 </Form.Text>
               </Form.Group>
             </Card.Body>
@@ -234,37 +355,37 @@ export default function AdicionarParticipante() {
         </Col>
 
         <Col md={4}>
-          <Card className="bg-light">
+          <Card className='bg-light'>
             <Card.Body>
-              <h6 className="mb-3">Instruções</h6>
-              <ul className="list-unstyled small">
-                <li className="mb-2">
-                  <IconifyIcon icon="iconoir:check" className="text-success me-2" />
-                  Selecione a empresa onde os participantes serão cadastrados
+              <h6 className='mb-3'>Instrucoes</h6>
+              <ul className='list-unstyled small'>
+                <li className='mb-2'>
+                  <IconifyIcon icon='iconoir:check' className='text-success me-2' />
+                  Selecione a empresa onde os participantes serao cadastrados
                 </li>
-                <li className="mb-2">
-                  <IconifyIcon icon="iconoir:check" className="text-success me-2" />
-                  Informe os logins no modo texto ou faça upload de planilha
+                <li className='mb-2'>
+                  <IconifyIcon icon='iconoir:check' className='text-success me-2' />
+                  Informe os logins no modo texto ou faca upload de planilha
                 </li>
-                <li className="mb-2">
-                  <IconifyIcon icon="iconoir:check" className="text-success me-2" />
-                  Opcional: defina uma senha padrão para todos
+                <li className='mb-2'>
+                  <IconifyIcon icon='iconoir:check' className='text-success me-2' />
+                  Opcional: defina uma senha padrao para todos
                 </li>
-                <li className="mb-2">
-                  <IconifyIcon icon="iconoir:check" className="text-success me-2" />
+                <li className='mb-2'>
+                  <IconifyIcon icon='iconoir:check' className='text-success me-2' />
                   O sistema verifica duplicados automaticamente
                 </li>
-                <li className="mb-2">
-                  <IconifyIcon icon="iconoir:check" className="text-success me-2" />
-                  Após o processamento, você verá o resumo dos resultados
+                <li className='mb-2'>
+                  <IconifyIcon icon='iconoir:check' className='text-success me-2' />
+                  Apos o processamento, voce vera o resumo dos resultados
                 </li>
               </ul>
 
-              <hr className="my-3" />
+              <hr className='my-3' />
 
-              <h6 className="mb-2">Formato Excel</h6>
-              <Table bordered size="sm" className="bg-white">
-                <thead className="table-light">
+              <h6 className='mb-2'>Formato CSV</h6>
+              <Table bordered size='sm' className='bg-white'>
+                <thead className='table-light'>
                   <tr>
                     <th>login</th>
                   </tr>
@@ -280,30 +401,29 @@ export default function AdicionarParticipante() {
         </Col>
       </Row>
 
-      {/* Botões de Ação */}
-      <div className="d-flex justify-content-between mt-4">
+      <div className='d-flex justify-content-between mt-4'>
         <Button
-          variant="outline-secondary"
+          variant='outline-secondary'
           onClick={() => router.back()}
         >
-          <IconifyIcon icon="iconoir:navigate-left" className="me-2" />
+          <IconifyIcon icon='iconoir:navigate-left' className='me-2' />
           Voltar
         </Button>
-        
+
         <Button
-          variant="success"
+          variant='success'
           onClick={handleProcessar}
           disabled={processando || !empresaSelecionada || loadingEmpresas}
-          size="lg"
+          size='lg'
         >
           {processando ? (
             <>
-              <Spinner animation="border" size="sm" className="me-2" />
+              <Spinner animation='border' size='sm' className='me-2' />
               Processando...
             </>
           ) : (
             <>
-              <IconifyIcon icon="iconoir:plus" className="me-2" />
+              <IconifyIcon icon='iconoir:plus' className='me-2' />
               Criar Participantes
             </>
           )}
