@@ -217,6 +217,31 @@ export default function AdicionarParticipante() {
       })
   }
 
+  const baixarRelatorioErros = () => {
+    if (!resultado || resultado.erros.length === 0) return
+
+    const linhas = [
+      ['valor', 'motivo', 'linha', 'posicao'],
+      ...resultado.erros.map((erro) => [
+        erro.valor || '',
+        erro.motivo,
+        erro.linha ? String(erro.linha) : '',
+        erro.coluna ? String(erro.coluna) : '',
+      ]),
+    ]
+
+    const escaparCsv = (valor: string) => `"${valor.replace(/"/g, '""')}"`
+    const csv = linhas.map((linha) => linha.map(escaparCsv).join(',')).join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'relatorio-erros-importacao.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <>
       <PageTitle title='Adicionar Participantes' subName='Participantes' />
@@ -254,6 +279,12 @@ export default function AdicionarParticipante() {
               </div>
             </div>
           )}
+          <div className='mt-3 small'>
+            <strong>Resumo de inconsistencias:</strong>{' '}
+            login vazio: {resultado.erros.filter((erro) => erro.motivo === 'Login vazio').length},{' '}
+            formato invalido: {resultado.erros.filter((erro) => erro.motivo === 'Formato invalido').length},{' '}
+            duplicado: {resultado.duplicados.length}
+          </div>
           {resultado.erros.length > 0 && (
             <div className='mt-3'>
               <small className='text-muted'>Erros encontrados:</small>
@@ -268,6 +299,10 @@ export default function AdicionarParticipante() {
                 ))}
                 {resultado.erros.length > 5 && <div>e mais {resultado.erros.length - 5}...</div>}
               </div>
+              <Button variant='outline-danger' size='sm' className='mt-2' onClick={baixarRelatorioErros}>
+                <IconifyIcon icon='iconoir:download' className='me-2' />
+                Baixar relatorio de erros (CSV)
+              </Button>
             </div>
           )}
         </Alert>

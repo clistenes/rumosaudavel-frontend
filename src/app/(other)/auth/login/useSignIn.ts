@@ -85,7 +85,10 @@ const useSignIn = () => {
         })
         // O redirecionamento será feito pelo useEffect quando a sessão atualizar
       } else {
-        const errorMessage = result?.error || 'Credenciais inválidas'
+        const errorMessage =
+          result?.error === 'CredentialsSignin'
+            ? 'Login ou senha inválidos'
+            : result?.error || 'Credenciais inválidas'
         console.error('Erro ao fazer login:', errorMessage)
         setError(errorMessage)
         toast.error('Erro ao fazer login', {

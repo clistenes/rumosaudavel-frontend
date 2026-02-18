@@ -152,6 +152,31 @@ export default function NovoUsuarioEmpresaPage() {
     }
   }
 
+  const baixarRelatorioErros = () => {
+    if (!resultado || resultado.erros.length === 0) return
+
+    const linhas = [
+      ['valor', 'motivo', 'linha', 'posicao'],
+      ...resultado.erros.map((erro) => [
+        erro.valor || '',
+        erro.motivo,
+        erro.linha ? String(erro.linha) : '',
+        erro.coluna ? String(erro.coluna) : '',
+      ]),
+    ]
+
+    const escaparCsv = (valor: string) => `"${valor.replace(/"/g, '""')}"`
+    const csv = linhas.map((linha) => linha.map(escaparCsv).join(',')).join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'relatorio-erros-importacao.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <>
       <PageTitle title='Novo Acesso' subName='Cadastrar participantes em lote' />
@@ -159,6 +184,12 @@ export default function NovoUsuarioEmpresaPage() {
       {resultado && (
         <Alert variant='success' className='mb-4'>
           <strong>Processamento concluido:</strong> {resultado.criados} criados, {resultado.duplicados.length} duplicados, {resultado.erros.length} erros, {resultado.total} processados.
+          <div className='small mt-2'>
+            <strong>Resumo de inconsistencias:</strong>{' '}
+            login vazio: {resultado.erros.filter((erro) => erro.motivo === 'Login vazio').length},{' '}
+            formato invalido: {resultado.erros.filter((erro) => erro.motivo === 'Formato invalido').length},{' '}
+            duplicado: {resultado.duplicados.length}
+          </div>
           {resultado.erros.length > 0 && (
             <div className='small text-danger mt-2'>
               {resultado.erros.slice(0, 5).map((erro, index) => (
@@ -169,6 +200,10 @@ export default function NovoUsuarioEmpresaPage() {
                   {erro.linha ? ')' : ''}
                 </div>
               ))}
+              <Button variant='outline-danger' size='sm' className='mt-2' onClick={baixarRelatorioErros}>
+                <IconifyIcon icon='iconoir:download' className='me-2' />
+                Baixar relatorio de erros (CSV)
+              </Button>
             </div>
           )}
         </Alert>

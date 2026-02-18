@@ -186,7 +186,7 @@ export const options: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.login || !credentials?.password) {
-          throw new Error('Login e senha são obrigatórios')
+          return null
         }
 
         // Modo Demo - login fake sem API
@@ -210,7 +210,7 @@ export const options: NextAuthOptions = {
             } as User
           }
 
-          throw new Error('Credenciais inválidas (Modo Demo)')
+          return null
         }
 
         // Modo Produção - login via API Go
@@ -294,13 +294,16 @@ export const options: NextAuthOptions = {
           }
 
           console.log('❌ [NextAuth] API não retornou token:', response.data)
-          throw new Error(response.data.message || 'Credenciais inválidas')
+          return null
         } catch (error) {
           console.error('❌ [NextAuth] Erro ao fazer login:', error)
           
           if (axios.isAxiosError(error)) {
             console.error('❌ [NextAuth] Status:', error.response?.status)
             console.error('❌ [NextAuth] Resposta da API:', error.response?.data)
+            if (error.response?.status === 401 || error.response?.status === 403) {
+              return null
+            }
             throw new Error(error.response?.data?.message || `Erro ${error.response?.status}: ${error.response?.statusText}`)
           }
           throw error
@@ -311,6 +314,7 @@ export const options: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/auth/login',
+    error: '/auth/login',
   },
   callbacks: {
     async jwt({ token, user }) {
