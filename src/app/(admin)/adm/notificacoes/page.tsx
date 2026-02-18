@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { Card, Button, Badge, Table, Form, Modal, Row, Col, Tabs, Tab } from 'react-bootstrap'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import ComponentContainerCard from '@/components/ComponentContainerCard'
@@ -39,10 +41,28 @@ const templatesDemo: Template[] = [
 ]
 
 export default function NotificacoesPage() {
+  const searchParams = useSearchParams()
+  const empresaId = searchParams.get('empresa')
   const [activeTab, setActiveTab] = useState('enviadas')
   const [showModal, setShowModal] = useState(false)
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>(notificacoesDemo)
   const [templates] = useState<Template[]>(templatesDemo)
+
+  if (!empresaId) {
+    return (
+      <>
+        <PageTitle title='Central de Notificações' subName='Gerencie lembretes e comunicações' />
+        <Card>
+          <Card.Body>
+            <p className='mb-3'>Esta tela deve ser acessada pela lista de empresas.</p>
+            <Link href='/adm/lista-empresas'>
+              <Button variant='primary' size='sm'>Voltar para Lista de Empresas</Button>
+            </Link>
+          </Card.Body>
+        </Card>
+      </>
+    )
+  }
 
   const getTipoBadge = (tipo: string) => {
     const colors: Record<string, string> = {

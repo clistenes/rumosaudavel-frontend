@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Card, Row, Col, Badge, ProgressBar, Table, Dropdown, Button } from 'react-bootstrap'
+import { Card, Row, Col, Badge, ProgressBar, Table, Dropdown, Button, Alert } from 'react-bootstrap'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import ComponentContainerCard from '@/components/ComponentContainerCard'
@@ -27,6 +28,24 @@ interface Metrica {
 
 export default function DashboardAnalyticsPage() {
   const [periodo, setPeriodo] = useState('30d')
+  const searchParams = useSearchParams()
+  const empresaId = searchParams.get('empresa')
+
+  if (!empresaId) {
+    return (
+      <>
+        <PageTitle title='Dashboard Analytics' subName='Administração' />
+        <Alert variant='warning'>
+          Esta tela deve ser acessada pela lista de empresas.
+          <div className='mt-2'>
+            <Link href='/adm/lista-empresas'>
+              <Button variant='primary' size='sm'>Voltar para Lista de Empresas</Button>
+            </Link>
+          </div>
+        </Alert>
+      </>
+    )
+  }
 
   // Calcular métricas reais baseadas nos dados
   const metricas: Metrica[] = useMemo(() => {
