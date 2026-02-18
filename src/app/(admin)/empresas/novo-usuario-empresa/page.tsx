@@ -8,17 +8,18 @@ import ComponentContainerCard from '@/components/ComponentContainerCard'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import { useDemo } from '@/context/DemoContext'
 import { useNotificationContext } from '@/context/useNotificationContext'
+import {
+  extractLoginCandidatesDetailedFromFile,
+  extractLoginCandidatesDetailedFromText,
+  normalizeLogin,
+  type LoginCandidate,
+} from '@/utils/login-import'
 
 type ResultadoImportacao = {
   criados: number
   duplicados: string[]
   total: number
-}
-
-const normalizarLogin = (valor: string) => {
-  const bruto = valor.trim().toLowerCase()
-  if (!bruto) return ''
-  return bruto.includes('@') ? bruto.split('@')[0] : bruto
+  erros: { valor: string; motivo: string; linha?: number; coluna?: number }[]
 }
 
 const nomePorLogin = (login: string) => {
@@ -31,10 +32,7 @@ const nomePorLogin = (login: string) => {
 }
 
 const extrairLoginsTexto = (texto: string) => {
-  return texto
-    .split(/[,;\n]+/)
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
+  return extractLoginCandidatesDetailedFromText(texto)
 }
 
 export default function NovoUsuarioEmpresaPage() {
@@ -53,29 +51,6 @@ export default function NovoUsuarioEmpresaPage() {
     [empresas, empresaId]
   )
 
-  const processarArquivo = async (arquivo: File): Promise<string[]> => {
-    const extensao = arquivo.name.split('.').pop()?.toLowerCase() || ''
-
-    if (!['csv', 'txt', 'xlsx', 'xls'].includes(extensao)) {
-      throw new Error('Formato invalido. Use CSV, TXT, XLSX ou XLS.')
-    }
-
-    if (extensao === 'xlsx' || extensao === 'xls') {
-      throw new Error('No modo demo, para processamento automatico use CSV/TXT.')
-    }
-
-    const conteudo = await arquivo.text()
-    return conteudo
-      .split(/\r?\n/)
-      .flatMap((linha) => linha.split(/[;,]/))
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
-      .filter((item) => {
-        const valor = item.toLowerCase()
-        return valor !== 'login' && valor !== 'email'
-      })
-  }
-
   const handleSalvar = async () => {
     if (!empresaId) {
       showNotification({ message: 'Selecione a empresa.', variant: 'warning' })
@@ -85,38 +60,51 @@ export default function NovoUsuarioEmpresaPage() {
     try {
       setSalvando(true)
 
-      let logins = extrairLoginsTexto(loginsTexto)
+      let loginsBrutos: LoginCandidate[] = extrairLoginsTexto(loginsTexto)
       if (arquivoExcel) {
-        const loginsArquivo = await processarArquivo(arquivoExcel)
-        logins = [...logins, ...loginsArquivo]
+        const loginsArquivo = await extractLoginCandidatesDetailedFromFile(arquivoExcel)
+        loginsBrutos = [...loginsBrutos, ...loginsArquivo]
       }
 
-      logins = Array.from(new Set(logins.map(normalizarLogin).filter(Boolean)))
-
-      if (logins.length === 0) {
+      if (loginsBrutos.length === 0) {
         showNotification({ message: 'Informe logins no texto ou envie arquivo.', variant: 'warning' })
         return
       }
 
       const existentes = new Set(
         participantes
-          .map((participante: any) => normalizarLogin(participante.login || participante.email || ''))
+          .map((participante: any) => normalizeLogin(participante.login || participante.email || ''))
           .filter(Boolean)
       )
 
       const duplicados: string[] = []
+      const erros: { valor: string; motivo: string; linha?: number; coluna?: number }[] = []
+      const loginsLote = new Set<string>()
       let criados = 0
       const idEmpresa = Number(empresaId)
       const dominioEmpresa =
         empresaSelecionada?.email?.split('@')?.[1] ||
         `${String(empresaSelecionada?.nome || 'empresa').toLowerCase().replace(/[^a-z0-9]+/g, '')}.com.br`
 
-      logins.forEach((login, index) => {
-        if (existentes.has(login)) {
+      loginsBrutos.forEach((item, index) => {
+        const loginOriginal = item.value
+        const login = normalizeLogin(loginOriginal)
+        if (!login) {
+          erros.push({ valor: loginOriginal, motivo: 'Login vazio', linha: item.line, coluna: item.column })
+          return
+        }
+
+        if (!/^[a-z0-9._-]{3,}$/.test(login)) {
+          erros.push({ valor: loginOriginal, motivo: 'Formato invalido', linha: item.line, coluna: item.column })
+          return
+        }
+
+        if (loginsLote.has(login) || existentes.has(login)) {
           duplicados.push(login)
           return
         }
 
+        loginsLote.add(login)
         existentes.add(login)
         const sufixo = String(Date.now() + index).slice(-6)
 
@@ -147,11 +135,11 @@ export default function NovoUsuarioEmpresaPage() {
         criados += 1
       })
 
-      const resumo = { criados, duplicados, total: logins.length }
+      const resumo = { criados, duplicados, total: loginsBrutos.length, erros }
       setResultado(resumo)
 
       showNotification({
-        message: `${criados} acesso(s) criado(s) com sucesso.`,
+        message: `${criados} acesso(s) criado(s). ${duplicados.length} duplicados e ${erros.length} erros.`,
         variant: criados > 0 ? 'success' : 'warning',
       })
     } catch (error) {
@@ -170,7 +158,19 @@ export default function NovoUsuarioEmpresaPage() {
 
       {resultado && (
         <Alert variant='success' className='mb-4'>
-          <strong>Processamento concluido:</strong> {resultado.criados} criados, {resultado.duplicados.length} duplicados, {resultado.total} processados.
+          <strong>Processamento concluido:</strong> {resultado.criados} criados, {resultado.duplicados.length} duplicados, {resultado.erros.length} erros, {resultado.total} processados.
+          {resultado.erros.length > 0 && (
+            <div className='small text-danger mt-2'>
+              {resultado.erros.slice(0, 5).map((erro, index) => (
+                <div key={`${erro.valor}-${index}`}>
+                  {erro.valor || '(vazio)'}: {erro.motivo}
+                  {erro.linha ? ` (linha ${erro.linha}` : ''}
+                  {erro.coluna ? `, posicao ${erro.coluna}` : ''}
+                  {erro.linha ? ')' : ''}
+                </div>
+              ))}
+            </div>
+          )}
         </Alert>
       )}
 
@@ -214,6 +214,9 @@ export default function NovoUsuarioEmpresaPage() {
                     setArquivoExcel(input.files?.[0] || null)
                   }}
                 />
+                <Form.Text className='text-muted'>
+                  Formatos aceitos: CSV, TXT, XLS e XLSX.
+                </Form.Text>
               </Form.Group>
 
               <Form.Group className='mb-4'>
@@ -242,3 +245,4 @@ export default function NovoUsuarioEmpresaPage() {
     </>
   )
 }
+

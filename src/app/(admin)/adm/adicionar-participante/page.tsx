@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useCallback } from 'react'
 import { Card, Form, Button, Row, Col, Alert, Table, Tabs, Tab, Spinner } from 'react-bootstrap'
@@ -11,6 +11,13 @@ import { useImportarParticipantesTexto, useImportarParticipantesExcel } from '@/
 import { useNotificationContext } from '@/context/useNotificationContext'
 import { useDemo } from '@/context/DemoContext'
 import { isDemoMode } from '@/utils/env'
+import {
+  extractLoginCandidatesDetailedFromFile,
+  extractLoginCandidatesDetailedFromText,
+  extractLoginCandidatesFromFile,
+  normalizeLogin,
+  type LoginCandidate,
+} from '@/utils/login-import'
 
 export default function AdicionarParticipante() {
   const router = useRouter()
@@ -30,6 +37,7 @@ export default function AdicionarParticipante() {
     criados: number
     duplicados: string[]
     total: number
+    erros: { valor: string; motivo: string; linha?: number; coluna?: number }[]
   } | null>(null)
 
   const { data: empresasData, loading: loadingEmpresas } = useEmpresas({ perPage: 1000 })
@@ -40,18 +48,7 @@ export default function AdicionarParticipante() {
 
   const processando = !demoMode && (loadingTexto || loadingExcel)
 
-  const processarLogins = useCallback((texto: string): string[] => {
-    return texto
-      .split(/[,;\n]+/)
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
-  }, [])
-
-  const normalizarLogin = useCallback((valor: string): string => {
-    const bruto = valor.trim().toLowerCase()
-    if (!bruto) return ''
-    return bruto.includes('@') ? bruto.split('@')[0] : bruto
-  }, [])
+  const processarLogins = useCallback((texto: string): LoginCandidate[] => extractLoginCandidatesDetailedFromText(texto), [])
 
   const formatarNomePorLogin = useCallback((login: string): string => {
     return login
@@ -62,28 +59,10 @@ export default function AdicionarParticipante() {
       .join(' ')
   }, [])
 
-  const extrairLoginsArquivoDemo = useCallback(async (arquivo: File): Promise<string[]> => {
-    const extensao = arquivo.name.split('.').pop()?.toLowerCase() || ''
-    if (!['csv', 'txt'].includes(extensao)) {
-      throw new Error('No modo demo, use arquivo CSV ou TXT.')
-    }
-
-    const conteudo = await arquivo.text()
-    return conteudo
-      .split(/\r?\n/)
-      .flatMap((linha) => linha.split(/[;,]/))
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
-      .filter((item) => {
-        const valor = item.toLowerCase()
-        return valor !== 'login' && valor !== 'email'
-      })
-  }, [])
-
   const handleTextoChange = (texto: string) => {
     setLoginsTexto(texto)
     const logins = processarLogins(texto)
-    setPreview(logins.slice(0, 10))
+    setPreview(logins.slice(0, 10).map((item) => item.value))
   }
 
   const handleProcessar = async () => {
@@ -93,15 +72,15 @@ export default function AdicionarParticipante() {
     }
 
     try {
-      let logins: string[] = []
+      let loginsBrutos: LoginCandidate[] = []
 
       if (activeTab === 'texto') {
-        logins = processarLogins(loginsTexto)
+        loginsBrutos = processarLogins(loginsTexto)
       } else if (arquivoExcel.length > 0 && demoMode) {
-        logins = await extrairLoginsArquivoDemo(arquivoExcel[0])
+        loginsBrutos = await extractLoginCandidatesDetailedFromFile(arquivoExcel[0])
       }
 
-      if (logins.length === 0 && arquivoExcel.length === 0) {
+      if (loginsBrutos.length === 0 && arquivoExcel.length === 0) {
         showNotification({ message: 'Informe ao menos um login ou envie um arquivo.', variant: 'warning' })
         return
       }
@@ -115,17 +94,27 @@ export default function AdicionarParticipante() {
 
         const loginsExistentes = new Set(
           demoContext.participantes
-            .map((participante: any) => normalizarLogin(participante.login || participante.email || ''))
+            .map((participante: any) => normalizeLogin(participante.login || participante.email || ''))
             .filter(Boolean)
         )
 
+        const erros: { valor: string; motivo: string; linha?: number; coluna?: number }[] = []
         const loginsLote = new Set<string>()
         const duplicados: string[] = []
         let criados = 0
 
-        logins.forEach((loginOriginal, index) => {
-          const login = normalizarLogin(loginOriginal)
-          if (!login) return
+        loginsBrutos.forEach((item, index) => {
+          const loginOriginal = item.value
+          const login = normalizeLogin(loginOriginal)
+          if (!login) {
+            erros.push({ valor: loginOriginal, motivo: 'Login vazio', linha: item.line, coluna: item.column })
+            return
+          }
+
+          if (!/^[a-z0-9._-]{3,}$/.test(login)) {
+            erros.push({ valor: loginOriginal, motivo: 'Formato invalido', linha: item.line, coluna: item.column })
+            return
+          }
 
           if (loginsExistentes.has(login) || loginsLote.has(login)) {
             duplicados.push(login)
@@ -165,11 +154,12 @@ export default function AdicionarParticipante() {
         setResultado({
           criados,
           duplicados,
-          total: logins.length,
+          total: loginsBrutos.length,
+          erros,
         })
 
         showNotification({
-          message: `${criados} participantes importados no modo demo.`,
+          message: `${criados} participantes importados. ${duplicados.length} duplicados e ${erros.length} erros.`,
           variant: criados > 0 ? 'success' : 'warning',
         })
 
@@ -195,7 +185,8 @@ export default function AdicionarParticipante() {
         setResultado({
           criados: (response as any).importados || (response as any).criados || 0,
           duplicados: (response as any).log || (response as any).duplicados || [],
-          total: logins.length || arquivoExcel.length,
+          total: loginsBrutos.length || arquivoExcel.length,
+          erros: [],
         })
 
         showNotification({
@@ -215,7 +206,7 @@ export default function AdicionarParticipante() {
     setArquivoExcel(files)
     if (!demoMode || files.length === 0) return
 
-    extrairLoginsArquivoDemo(files[0])
+    extractLoginCandidatesFromFile(files[0])
       .then((logins) => setPreview(logins.slice(0, 10)))
       .catch((error) => {
         setPreview([])
@@ -246,6 +237,10 @@ export default function AdicionarParticipante() {
               <small>Duplicados (ignorados)</small>
             </div>
             <div className='text-center'>
+              <h4 className='text-danger mb-0'>{resultado.erros.length}</h4>
+              <small>Erros</small>
+            </div>
+            <div className='text-center'>
               <h4 className='mb-0'>{resultado.total}</h4>
               <small>Total processado</small>
             </div>
@@ -256,6 +251,22 @@ export default function AdicionarParticipante() {
               <div className='small text-warning'>
                 {resultado.duplicados.slice(0, 5).join(', ')}
                 {resultado.duplicados.length > 5 && ` e mais ${resultado.duplicados.length - 5}...`}
+              </div>
+            </div>
+          )}
+          {resultado.erros.length > 0 && (
+            <div className='mt-3'>
+              <small className='text-muted'>Erros encontrados:</small>
+              <div className='small text-danger'>
+                {resultado.erros.slice(0, 5).map((erro, index) => (
+                  <div key={`${erro.valor}-${index}`}>
+                    {erro.valor || '(vazio)'}: {erro.motivo}
+                    {erro.linha ? ` (linha ${erro.linha}` : ''}
+                    {erro.coluna ? `, posicao ${erro.coluna}` : ''}
+                    {erro.linha ? ')' : ''}
+                  </div>
+                ))}
+                {resultado.erros.length > 5 && <div>e mais {resultado.erros.length - 5}...</div>}
               </div>
             </div>
           )}
@@ -317,7 +328,7 @@ export default function AdicionarParticipante() {
                 <Tab eventKey='excel' title='Upload Excel'>
                   <Alert variant='info' className='mb-3'>
                     <IconifyIcon icon='iconoir:info-circle' className='me-2' />
-                    No modo demo, use arquivo CSV/TXT com uma coluna de logins.
+                    Suporta CSV, TXT, XLS e XLSX. Se houver coluna "login" ou "email", ela sera priorizada.
                   </Alert>
 
                   <FileUpload
@@ -432,3 +443,4 @@ export default function AdicionarParticipante() {
     </>
   )
 }
+
