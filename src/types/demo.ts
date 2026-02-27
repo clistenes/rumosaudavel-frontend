@@ -20,11 +20,27 @@ export type DemoProgramaQuestionarioVinculo = {
   dependenciaCondicao?: string
 }
 
+export type DemoProgramaEmpresaVinculo = {
+  id: number
+  empresaId: number
+  intervaloInicio?: string | null
+  intervaloFim?: string | null
+  indeterminado: boolean
+  acessoPublicoAtivo: boolean
+  usuariosPermitidos: number[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type DemoProgramaComVinculos = DemoPrograma & {
+  empresasVinculadas?: DemoProgramaEmpresaVinculo[]
+}
+
 export type DemoState = {
   empresas: DemoEmpresa[]
   participantes: DemoParticipante[]
   questionarios: DemoQuestionario[]
-  programas: DemoPrograma[]
+  programas: DemoProgramaComVinculos[]
   alertas: DemoAlerta[]
   usuarios: DemoUsuario[]
   perguntas: DemoPergunta[]

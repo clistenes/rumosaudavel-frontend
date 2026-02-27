@@ -1,65 +1,41 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import ComponentContainerCard from '@/components/ComponentContainerCard'
 import PageTitle from '@/components/PageTitle'
-import { Row, Col, Table, Badge, Card, Button, Alert } from 'react-bootstrap'
+import { useDemo } from '@/context/DemoContext'
+import { getEmpresaAtual, getEmpresaParticipantes } from '@/utils/demo-reports'
+import { Alert, Badge, Button, Card, Col, Form, Row, Table } from 'react-bootstrap'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { exportCsv } from '@/utils/demo-export'
 
-// Dados realistas do participante
-const dadosParticipante = {
-  id: 1,
-  login: 'joao.silva',
-  nome: 'João Silva',
-  email: 'joao.silva@empresa.com',
-  setor: 'Administrativo',
-  faixaEtaria: '26-35',
-  dataResposta: '10/02/2025',
-  pontuacaoTotal: 78,
-  risco: 'alto',
-  termometro: 'vermelho',
+const getCorRisco = (risco: string) => {
+  if (risco === 'alto') return '#dc3545'
+  if (risco === 'medio') return '#ffc107'
+  return '#28a745'
 }
 
-const resultadosPorDimensao = [
-  { dimensao: 'Ambiente de Trabalho', pontuacao: 4.2, risco: 'baixo', peso: 20 },
-  { dimensao: 'Relacionamentos', pontuacao: 4.5, risco: 'baixo', peso: 15 },
-  { dimensao: 'Reconhecimento', pontuacao: 2.1, risco: 'alto', peso: 25 },
-  { dimensao: 'Desenvolvimento', pontuacao: 3.0, risco: 'medio', peso: 20 },
-  { dimensao: 'Comunicação', pontuacao: 3.4, risco: 'medio', peso: 20 },
-]
-
-const indicadoresPHQ9 = {
-  nome: 'PHQ-9 (Depressão)',
-  pontuacao: 12,
-  interpretacao: 'Depressão moderada',
-  gravidade: 'moderada',
+const getBadgeGravidade = (pontuacao: number, thresholds: { medio: number; alto: number }) => {
+  if (pontuacao >= thresholds.alto) return { bg: 'danger', label: 'Alta' }
+  if (pontuacao >= thresholds.medio) return { bg: 'warning', label: 'Moderada' }
+  return { bg: 'success', label: 'Baixa' }
 }
-
-const indicadoresGAD7 = {
-  nome: 'GAD-7 (Ansiedade)',
-  pontuacao: 10,
-  interpretacao: 'Ansiedade moderada',
-  gravidade: 'moderada',
-}
-
-const recomendacoes = [
-  'Buscar apoio do setor de RH para discutir dificuldades no trabalho',
-  'Considerar participação em programas de desenvolvimento profissional',
-  'Avaliar possibilidade de mentoria ou coaching',
-  'Manter comunicação regular com gestor sobre expectativas e metas',
-]
 
 export default function RelatorioIndividual() {
+  const router = useRouter()
   const searchParams = useSearchParams()
-  const empresaId = searchParams.get('empresa')
+  const empresaId = Number(searchParams.get('empresa') || 0)
+  const participanteParam = Number(searchParams.get('participante') || 0)
+
+  const { empresas, participantes } = useDemo()
   const [mostrarDetalhes, setMostrarDetalhes] = useState(false)
 
   if (!empresaId) {
     return (
       <>
-        <PageTitle title='Relatório Individual' subName='Relatórios' />
+        <PageTitle title='Relatorio Individual' subName='Relatorios' />
         <Alert variant='warning'>
           Esta tela deve ser acessada pela lista de empresas.
           <div className='mt-2'>
@@ -72,48 +48,95 @@ export default function RelatorioIndividual() {
     )
   }
 
-  const getCorRisco = (risco: string) => {
-    const cores: { [key: string]: string } = {
-      baixo: '#28a745',
-      medio: '#ffc107',
-      alto: '#dc3545',
+  const empresa = getEmpresaAtual(empresas as any, empresaId)
+  const participantesEmpresa = getEmpresaParticipantes(participantes as any, empresaId) as any[]
+
+  const participanteAtual = useMemo(() => {
+    if (participanteParam > 0) {
+      const found = participantesEmpresa.find((item) => Number(item.id) === participanteParam)
+      if (found) return found
     }
-    return cores[risco] || '#6c757d'
+    return participantesEmpresa[0] || null
+  }, [participantesEmpresa, participanteParam])
+
+  if (!participanteAtual) {
+    return (
+      <>
+        <PageTitle title='Relatorio Individual' subName='Relatorios' />
+        <Alert variant='info'>Nao ha participantes para a empresa selecionada.</Alert>
+      </>
+    )
   }
 
-  const getBadgeGravidade = (gravidade: string) => {
-    const configs: { [key: string]: { bg: string; text: string } } = {
-      leve: { bg: 'success', text: 'Leve' },
-      moderada: { bg: 'warning', text: 'Moderada' },
-      grave: { bg: 'danger', text: 'Grave' },
-    }
-    return configs[gravidade] || { bg: 'secondary', text: gravidade }
-  }
+  const phq9 = Number(participanteAtual.phq9Score || 0)
+  const gad7 = Number(participanteAtual.gad7Score || 0)
+  const risco = participanteAtual.riscoSaude || (phq9 >= 15 || gad7 >= 15 ? 'alto' : phq9 >= 10 || gad7 >= 10 ? 'medio' : 'baixo')
+  const pontuacaoTotal = Math.round(((phq9 / 27) * 60) + ((gad7 / 21) * 40))
+
+  const resultadosPorDimensao = [
+    { dimensao: 'Ambiente de trabalho', valorBase: (30 - phq9) / 6, peso: 20 },
+    { dimensao: 'Relacionamentos', valorBase: (25 - gad7) / 5, peso: 15 },
+    { dimensao: 'Reconhecimento', valorBase: (22 - phq9) / 5, peso: 25 },
+    { dimensao: 'Desenvolvimento', valorBase: (24 - gad7) / 5, peso: 20 },
+    { dimensao: 'Comunicacao', valorBase: (20 - Math.max(phq9, gad7)) / 4, peso: 20 },
+  ].map((item) => {
+    const pontuacao = Math.max(1, Math.min(5, Number(item.valorBase.toFixed(1))))
+    const riscoDim = pontuacao >= 4 ? 'baixo' : pontuacao >= 3 ? 'medio' : 'alto'
+    return { ...item, pontuacao, risco: riscoDim }
+  })
+
+  const badgePhq = getBadgeGravidade(phq9, { medio: 10, alto: 15 })
+  const badgeGad = getBadgeGravidade(gad7, { medio: 10, alto: 15 })
+
+  const recomendacoes = [
+    risco === 'alto' ? 'Encaminhar para acompanhamento especializado em ate 48h.' : 'Manter monitoramento regular das respostas.',
+    phq9 >= 10 ? 'Priorizar plano de apoio para sintomas depressivos.' : 'Estimular manutencao de rotina saudavel.',
+    gad7 >= 10 ? 'Aplicar estrategia de manejo de ansiedade com apoio do gestor.' : 'Reforcar praticas de bem-estar e pausa ativa.',
+    'Registrar devolutiva com RH e acompanhar evolucao no proximo ciclo.',
+  ]
 
   return (
     <>
-      <PageTitle title='Relatório Individual' subName='Relatórios' />
+      <PageTitle title='Relatorio Individual' subName='Relatorios' />
 
-      {/* Header do Participante */}
-      <Row className="mb-4">
+      <Row className='mb-3'>
+        <Col md={6}>
+          <Form.Group>
+            <Form.Label>Empresa</Form.Label>
+            <Form.Control value={empresa?.nomeCurto || empresa?.nome || ''} disabled />
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group>
+            <Form.Label>Participante</Form.Label>
+            <Form.Select
+              value={participanteAtual.id}
+              onChange={(event) => {
+                const nextId = Number(event.target.value)
+                router.replace(`/adm/relatorios/individual?empresa=${empresaId}&participante=${nextId}`)
+              }}
+            >
+              {participantesEmpresa.map((item) => (
+                <option key={item.id} value={item.id}>{item.nome}</option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <Row className='mb-4'>
         <Col>
-          <Card className="bg-light">
+          <Card className='bg-light'>
             <Card.Body>
-              <div className="d-flex justify-content-between align-items-start">
+              <div className='d-flex justify-content-between align-items-start'>
                 <div>
-                  <h4 className="mb-1">{dadosParticipante.nome}</h4>
-                  <p className="text-muted mb-2">
-                    <IconifyIcon icon="iconoir:user" className="me-2" />
-                    {dadosParticipante.login} | {dadosParticipante.email}
-                  </p>
-                  <p className="text-muted mb-0">
-                    <IconifyIcon icon="iconoir:building" className="me-2" />
-                    {dadosParticipante.setor} | {dadosParticipante.faixaEtaria} anos
-                  </p>
+                  <h4 className='mb-1'>{participanteAtual.nome}</h4>
+                  <p className='text-muted mb-1'>{participanteAtual.email}</p>
+                  <p className='text-muted mb-0'>{participanteAtual.cargo} | {participanteAtual.departamento || 'Geral'}</p>
                 </div>
-                <div className="text-end">
-                  <p className="text-muted small mb-1">Data da Resposta:</p>
-                  <p className="fw-bold">{dadosParticipante.dataResposta}</p>
+                <div className='text-end'>
+                  <p className='text-muted small mb-1'>Ultima avaliacao</p>
+                  <strong>{participanteAtual.ultimaAvaliacao || '-'}</strong>
                 </div>
               </div>
             </Card.Body>
@@ -121,105 +144,73 @@ export default function RelatorioIndividual() {
         </Col>
       </Row>
 
-      {/* Cards Principais */}
-      <Row className="mb-4">
+      <Row className='mb-4'>
         <Col md={4}>
-          <ComponentContainerCard title="Pontuação Total">
-            <div className="text-center">
+          <ComponentContainerCard title='Pontuacao Total'>
+            <div className='text-center'>
               <div
                 style={{
-                  width: '120px',
-                  height: '120px',
+                  width: 120,
+                  height: 120,
                   borderRadius: '50%',
-                  backgroundColor: getCorRisco(dadosParticipante.risco),
+                  backgroundColor: getCorRisco(risco),
+                  color: '#fff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   margin: '0 auto 15px',
-                  color: '#fff',
-                  fontSize: '36px',
-                  fontWeight: 'bold',
+                  fontSize: 34,
+                  fontWeight: 700,
                 }}
               >
-                {dadosParticipante.pontuacaoTotal}
+                {pontuacaoTotal}
               </div>
-              <Badge bg={dadosParticipante.risco === 'alto' ? 'danger' : dadosParticipante.risco === 'medio' ? 'warning' : 'success'} className="px-3 py-2">
-                Risco {dadosParticipante.risco.toUpperCase()}
+              <Badge bg={risco === 'alto' ? 'danger' : risco === 'medio' ? 'warning' : 'success'}>
+                Risco {String(risco).toUpperCase()}
               </Badge>
             </div>
           </ComponentContainerCard>
         </Col>
 
         <Col md={4}>
-          <ComponentContainerCard title={indicadoresPHQ9.nome}>
-            <div className="text-center">
-              <h2 className={`mb-2 ${indicadoresPHQ9.gravidade === 'grave' ? 'text-danger' : indicadoresPHQ9.gravidade === 'moderada' ? 'text-warning' : 'text-success'}`}>
-                {indicadoresPHQ9.pontuacao}/27
-              </h2>
-              <p className="mb-2">{indicadoresPHQ9.interpretacao}</p>
-              <Badge bg={getBadgeGravidade(indicadoresPHQ9.gravidade).bg}>
-                {getBadgeGravidade(indicadoresPHQ9.gravidade).text}
-              </Badge>
-              <div className="mt-3 text-start small">
-                <p className="text-muted mb-1">
-                  <IconifyIcon icon="iconoir:info-circle" className="me-1" />
-                  0-4: Mínima | 5-9: Leve | 10-14: Moderada | 15-19: Moderadamente Grave | 20-27: Grave
-                </p>
-              </div>
+          <ComponentContainerCard title='PHQ-9'>
+            <div className='text-center'>
+              <h2 className='mb-2'>{phq9}/27</h2>
+              <Badge bg={badgePhq.bg}>{badgePhq.label}</Badge>
             </div>
           </ComponentContainerCard>
         </Col>
 
         <Col md={4}>
-          <ComponentContainerCard title={indicadoresGAD7.nome}>
-            <div className="text-center">
-              <h2 className={`mb-2 ${indicadoresGAD7.gravidade === 'grave' ? 'text-danger' : indicadoresGAD7.gravidade === 'moderada' ? 'text-warning' : 'text-success'}`}>
-                {indicadoresGAD7.pontuacao}/21
-              </h2>
-              <p className="mb-2">{indicadoresGAD7.interpretacao}</p>
-              <Badge bg={getBadgeGravidade(indicadoresGAD7.gravidade).bg}>
-                {getBadgeGravidade(indicadoresGAD7.gravidade).text}
-              </Badge>
-              <div className="mt-3 text-start small">
-                <p className="text-muted mb-1">
-                  <IconifyIcon icon="iconoir:info-circle" className="me-1" />
-                  0-4: Mínima | 5-9: Leve | 10-14: Moderada | 15-21: Grave
-                </p>
-              </div>
+          <ComponentContainerCard title='GAD-7'>
+            <div className='text-center'>
+              <h2 className='mb-2'>{gad7}/21</h2>
+              <Badge bg={badgeGad.bg}>{badgeGad.label}</Badge>
             </div>
           </ComponentContainerCard>
         </Col>
       </Row>
 
-      {/* Resultados por Dimensão */}
-      <Row className="mb-4">
+      <Row className='mb-4'>
         <Col md={8}>
-          <ComponentContainerCard title="Resultados por Dimensão">
-            <div className="table-responsive">
-              <Table className="mb-0">
-                <thead className="table-light">
+          <ComponentContainerCard title='Resultados por Dimensao'>
+            <div className='table-responsive'>
+              <Table className='mb-0'>
+                <thead className='table-light'>
                   <tr>
-                    <th>Dimensão</th>
-                    <th className="text-center">Pontuação</th>
-                    <th className="text-center">Peso</th>
-                    <th className="text-center">Risco</th>
+                    <th>Dimensao</th>
+                    <th className='text-center'>Pontuacao</th>
+                    <th className='text-center'>Peso</th>
+                    <th className='text-center'>Risco</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {resultadosPorDimensao.map((item, idx) => (
-                    <tr key={idx}>
+                  {resultadosPorDimensao.map((item) => (
+                    <tr key={item.dimensao}>
                       <td>{item.dimensao}</td>
-                      <td className="text-center">
-                        <span 
-                          className="fw-bold"
-                          style={{ color: item.pontuacao >= 4 ? '#28a745' : item.pontuacao >= 3 ? '#ffc107' : '#dc3545' }}
-                        >
-                          {item.pontuacao.toFixed(1)}
-                        </span>
-                        <span className="text-muted"> /5</span>
-                      </td>
-                      <td className="text-center">{item.peso}%</td>
-                      <td className="text-center">
+                      <td className='text-center fw-bold'>{item.pontuacao.toFixed(1)} / 5</td>
+                      <td className='text-center'>{item.peso}%</td>
+                      <td className='text-center'>
                         <Badge bg={item.risco === 'alto' ? 'danger' : item.risco === 'medio' ? 'warning' : 'success'}>
                           {item.risco.toUpperCase()}
                         </Badge>
@@ -233,16 +224,12 @@ export default function RelatorioIndividual() {
         </Col>
 
         <Col md={4}>
-          <ComponentContainerCard title="Recomendações">
-            <Alert variant="info" className="mb-3">
-              <IconifyIcon icon="iconoir:info-circle" className="me-2" />
-              Baseado nos resultados, recomendamos:
-            </Alert>
-            <ul className="list-unstyled">
-              {recomendacoes.map((rec, idx) => (
-                <li key={idx} className="mb-2 d-flex">
-                  <IconifyIcon icon="iconoir:check" className="text-success me-2 mt-1 flex-shrink-0" />
-                  <span className="small">{rec}</span>
+          <ComponentContainerCard title='Recomendacoes'>
+            <ul className='list-unstyled mb-0'>
+              {recomendacoes.map((item) => (
+                <li key={item} className='mb-2 d-flex'>
+                  <IconifyIcon icon='iconoir:check-circle' className='text-success me-2 mt-1' />
+                  <span className='small'>{item}</span>
                 </li>
               ))}
             </ul>
@@ -250,30 +237,48 @@ export default function RelatorioIndividual() {
         </Col>
       </Row>
 
-      {/* Alertas */}
       <Row>
         <Col>
-          <Alert variant="warning">
+          <Alert variant={risco === 'alto' ? 'danger' : risco === 'medio' ? 'warning' : 'success'}>
             <Alert.Heading>
-              <IconifyIcon icon="iconoir:warning-triangle" className="me-2" />
-              Atenção Necessária
+              <IconifyIcon icon='iconoir:warning-triangle' className='me-2' />
+              {risco === 'alto' ? 'Atencao Necessaria' : 'Acompanhamento Recomendado'}
             </Alert.Heading>
-            <p>
-              Os resultados indicam níveis moderados de depressão e ansiedade. 
-              Recomenda-se acompanhamento profissional e discussão com o gestor 
-              sobre fatores estressores identificados no ambiente de trabalho.
+            <p className='mb-3'>
+              Resultado atual do participante indica risco <strong>{risco}</strong> com PHQ-9 {phq9} e GAD-7 {gad7}.
             </p>
-            <hr />
-            <div className="d-flex justify-content-end gap-2">
-              <Button variant="outline-primary" size="sm">
-                <IconifyIcon icon="iconoir:envelope" className="me-1" />
-                Enviar por Email
+            <div className='d-flex justify-content-end gap-2'>
+              <Button variant='outline-primary' size='sm' onClick={() => setMostrarDetalhes((state) => !state)}>
+                <IconifyIcon icon='iconoir:eye' className='me-1' />
+                {mostrarDetalhes ? 'Ocultar detalhes' : 'Ver detalhes'}
               </Button>
-              <Button variant="primary" size="sm">
-                <IconifyIcon icon="iconoir:download" className="me-1" />
-                Exportar PDF
+              <Button
+                variant='primary'
+                size='sm'
+                onClick={() => {
+                  exportCsv(`relatorio-individual-${participanteAtual.id}.csv`, [{
+                    participante: participanteAtual.nome,
+                    empresa: empresa?.nomeCurto || empresa?.nome || '',
+                    cargo: participanteAtual.cargo || '',
+                    setor: participanteAtual.departamento || 'Geral',
+                    ultima_avaliacao: participanteAtual.ultimaAvaliacao || '',
+                    risco: risco,
+                    phq9: phq9,
+                    gad7: gad7,
+                    pontuacao_total: pontuacaoTotal,
+                    alertas_pendentes: Number(participanteAtual.alertasPendentes || 0),
+                  }])
+                }}
+              >
+                <IconifyIcon icon='iconoir:download' className='me-1' />
+                Exportar CSV
               </Button>
             </div>
+            {mostrarDetalhes && (
+              <div className='mt-3 border-top pt-3 small'>
+                Alertas pendentes: {Number(participanteAtual.alertasPendentes || 0)} | Ultima avaliacao: {participanteAtual.ultimaAvaliacao || '-'}
+              </div>
+            )}
           </Alert>
         </Col>
       </Row>

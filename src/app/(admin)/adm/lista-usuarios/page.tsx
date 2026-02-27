@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { Badge, Button, Card, Form, InputGroup, Modal, Pagination, Spinner, Table } from 'react-bootstrap'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { signIn, signOut } from 'next-auth/react'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import { useDemo } from '@/context/DemoContext'
@@ -110,6 +111,49 @@ export default function ListaUsuarios() {
     }
 
     showNotification({ message: 'Duplicacao ainda nao implementada na API.', variant: 'warning' })
+  }
+
+  const handleSimularAcesso = async (usuario: any) => {
+    if (!demoMode) {
+      showNotification({ message: 'Simulacao disponivel apenas no modo demo.', variant: 'warning' })
+      return
+    }
+
+    const role = String(usuario.role || '').toLowerCase()
+    const credenciaisPorPerfil: Record<string, { login: string; password: string; destino: string }> = {
+      admin: { login: 'admin', password: 'admin123', destino: '/inicio' },
+      empresa: { login: 'empresa', password: 'empresa123', destino: '/empresa' },
+      gestor: { login: 'empresa', password: 'empresa123', destino: '/empresa' },
+      participante: { login: 'participante', password: 'participante123', destino: '/participante' },
+    }
+
+    const credenciais = credenciaisPorPerfil[role]
+    if (!credenciais) {
+      showNotification({ message: `Perfil "${role}" sem simulacao configurada.`, variant: 'warning' })
+      return
+    }
+
+    try {
+      await signOut({ redirect: false })
+      const result = await signIn('credentials', {
+        redirect: false,
+        login: credenciais.login,
+        password: credenciais.password,
+      })
+
+      if (!result?.ok) {
+        showNotification({ message: 'Nao foi possivel iniciar a simulacao.', variant: 'danger' })
+        return
+      }
+
+      showNotification({
+        message: `Simulacao iniciada para o perfil ${role}.`,
+        variant: 'success',
+      })
+      router.push(credenciais.destino)
+    } catch {
+      showNotification({ message: 'Erro ao simular acesso.', variant: 'danger' })
+    }
   }
 
   const stats = useMemo(() => ({
@@ -262,6 +306,9 @@ export default function ListaUsuarios() {
                     </td>
                     <td className='text-center'><small>{formatarData(usuario.ultimoAcesso)}</small></td>
                     <td className='text-center'>
+                      <Button variant='outline-success' size='sm' className='me-1' onClick={() => handleSimularAcesso(usuario)} title='Simular Acesso'>
+                        <IconifyIcon icon='iconoir:play' />
+                      </Button>
                       <Button variant='outline-primary' size='sm' className='me-1' onClick={() => router.push(`/adm/editar-usuario/${usuario.id}`)}>
                         <IconifyIcon icon='iconoir:edit-pencil' />
                       </Button>

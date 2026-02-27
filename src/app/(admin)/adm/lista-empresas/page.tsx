@@ -12,6 +12,7 @@ import { useDemo } from '@/context/DemoContext'
 import { isDemoMode } from '@/utils/env'
 
 const getEmpresaAtiva = (empresa: any) => (empresa.status ? empresa.status === 'ativo' : !!empresa.ativo)
+const getEmpresaId = (empresa: any) => Number(empresa?.id ?? empresa?.empresa_id ?? 0)
 
 export default function ListaEmpresas() {
   const router = useRouter()
@@ -93,10 +94,11 @@ export default function ListaEmpresas() {
     if (!empresaToDelete) return
 
     try {
+      const empresaId = getEmpresaId(empresaToDelete)
       if (demoMode) {
-        deleteEmpresa(empresaToDelete.id)
+        deleteEmpresa(empresaId)
       } else {
-        await removerEmpresa(empresaToDelete.id)
+        await removerEmpresa(empresaId)
         refetch()
       }
 
@@ -239,7 +241,7 @@ export default function ListaEmpresas() {
               </thead>
               <tbody>
                 {empresasPaginadas.map((empresa: any) => (
-                  <tr key={empresa.id}>
+                  <tr key={getEmpresaId(empresa)}>
                     <td>
                       <div className='d-flex align-items-center'>
                         <div
@@ -278,11 +280,15 @@ export default function ListaEmpresas() {
                       <small className='text-muted'>{formatarData(empresa.dataCriacao || empresa.dataCadastro)}</small>
                     </td>
                     <td className='text-center'>
+                      {(() => {
+                        const empresaId = getEmpresaId(empresa)
+                        return (
+                          <>
                       <Button
                         variant='outline-primary'
                         size='sm'
                         className='me-1'
-                        onClick={() => router.push(`/adm/editar-empresa/${empresa.id ?? empresa.empresa_id}`)}
+                        onClick={() => router.push(`/adm/editar-empresa/${empresaId}`)}
                         title='Editar'
                       >
                         <IconifyIcon icon='iconoir:edit-pencil' />
@@ -291,7 +297,7 @@ export default function ListaEmpresas() {
                         variant='outline-info'
                         size='sm'
                         className='me-1'
-                        onClick={() => router.push(`/adm/lista-participantes?empresa=${empresa.id}`)}
+                        onClick={() => router.push(`/adm/lista-participantes?empresa=${empresaId}`)}
                         title='Ver Participantes'
                       >
                         <IconifyIcon icon='iconoir:community' />
@@ -300,7 +306,7 @@ export default function ListaEmpresas() {
                         variant='outline-secondary'
                         size='sm'
                         className='me-1'
-                        onClick={() => router.push(`/adm/dashboard-analytics?empresa=${empresa.id}`)}
+                        onClick={() => router.push(`/adm/dashboard-analytics?empresa=${empresaId}`)}
                         title='Analytics da Empresa'
                       >
                         <IconifyIcon icon='iconoir:graph-up' />
@@ -309,7 +315,7 @@ export default function ListaEmpresas() {
                         variant='outline-secondary'
                         size='sm'
                         className='me-1'
-                        onClick={() => router.push(`/adm/notificacoes?empresa=${empresa.id}`)}
+                        onClick={() => router.push(`/adm/notificacoes?empresa=${empresaId}`)}
                         title='Notificacoes da Empresa'
                       >
                         <IconifyIcon icon='iconoir:bell' />
@@ -318,7 +324,7 @@ export default function ListaEmpresas() {
                         variant='outline-secondary'
                         size='sm'
                         className='me-1'
-                        onClick={() => router.push(`/adm/relatorios/analitico?empresa=${empresa.id}`)}
+                        onClick={() => router.push(`/adm/relatorios/analitico?empresa=${empresaId}`)}
                         title='Relatorios da Empresa'
                       >
                         <IconifyIcon icon='iconoir:stats-report' />
@@ -331,6 +337,9 @@ export default function ListaEmpresas() {
                       >
                         <IconifyIcon icon='iconoir:trash' />
                       </Button>
+                          </>
+                        )
+                      })()}
                     </td>
                   </tr>
                 ))}

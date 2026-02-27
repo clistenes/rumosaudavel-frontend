@@ -12,7 +12,7 @@ import { useNotificationContext } from '@/context/useNotificationContext'
 
 export default function NovoUsuarioPage() {
   const router = useRouter()
-  const { empresas, addUsuario } = useDemo()
+  const { empresas, usuarios, addUsuario } = useDemo()
   const { showNotification } = useNotificationContext()
 
   const [showSuccess, setShowSuccess] = useState(false)
@@ -78,9 +78,17 @@ export default function NovoUsuarioPage() {
       return
     }
 
+    const loginDerivado = formData.email.trim().toLowerCase().split('@')[0] || formData.nome.trim().toLowerCase().replace(/\s+/g, '.')
+    const existeMesmoLogin = usuarios.some((usuario: any) => String(usuario.login || '').toLowerCase() === loginDerivado)
+    if (existeMesmoLogin) {
+      showNotification({ message: 'Ja existe um usuario com este login.', variant: 'warning' })
+      return
+    }
+
     addUsuario({
       nome: formData.nome.trim(),
       email: formData.email.trim(),
+      login: loginDerivado,
       role: tipoUsuario === 'empresa' ? 'gestor' : tipoUsuario,
       status: 'ativo',
       empresaId: formData.empresaId ? Number(formData.empresaId) : null,

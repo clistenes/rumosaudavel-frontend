@@ -32,7 +32,7 @@ export function ProtectedRoute({
       // Redirect to appropriate dashboard based on user type
       switch (session.user?.type) {
         case 1:
-          router.push('/adm')
+          router.push('/inicio')
           break
         case 2:
           router.push('/participante')

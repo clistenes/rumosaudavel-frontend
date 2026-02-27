@@ -26,7 +26,7 @@ export function RoleGuard({ children, allowedTypes, fallback }: RoleGuardProps) 
       // Redirect to appropriate dashboard
       switch (session.user?.type) {
         case 1:
-          router.push('/adm')
+          router.push('/inicio')
           break
         case 2:
           router.push('/participante')

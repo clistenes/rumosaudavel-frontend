@@ -350,7 +350,7 @@ export default function EmpresaDashboard() {
                             <Button 
                               variant="outline-primary" 
                               size="sm"
-                              onClick={() => router.push(`/empresa/relatorios/prontuario/${participante.id}`)}
+                              onClick={() => router.push('/empresa/participantes')}
                             >
                               <IconifyIcon icon="iconoir:page" />
                             </Button>
@@ -448,7 +448,7 @@ export default function EmpresaDashboard() {
                   </Link>
                 </Col>
                 <Col md={6} className="mb-3">
-                  <Link href="/empresa/relatorios/risco">
+                  <Link href="/empresa/relatorios/semaforo">
                     <Card className="h-100 cursor-pointer hover-shadow">
                       <Card.Body className="text-center">
                         <IconifyIcon icon="iconoir:warning-triangle" className="text-danger fs-2 mb-2" />
@@ -459,7 +459,7 @@ export default function EmpresaDashboard() {
                   </Link>
                 </Col>
                 <Col md={6} className="mb-3">
-                  <Link href="/empresa/questionarios">
+                  <Link href="/empresa/relatorios/graficos">
                     <Card className="h-100 cursor-pointer hover-shadow">
                       <Card.Body className="text-center">
                         <IconifyIcon icon="iconoir:clipboard-check" className="text-info fs-2 mb-2" />

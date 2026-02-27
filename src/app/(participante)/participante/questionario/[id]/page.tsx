@@ -1,190 +1,233 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Card, Button, ProgressBar, Badge, Form, Row, Col, Alert } from 'react-bootstrap'
+import { useEffect, useMemo, useState } from 'react'
+import { Alert, Badge, Button, Card, Form, ProgressBar, Row, Col } from 'react-bootstrap'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
-import { QUESTIONARIOS_DEMO } from '@/assets/data/demo-data'
 import { useNotificationContext } from '@/context/useNotificationContext'
+import { useDemo } from '@/context/DemoContext'
+import {
+  DemoResposta,
+  deleteSubmissaoQuestionario,
+  getParticipanteKey,
+  getSubmissaoByQuestionario,
+  normalizeRisco,
+  resolveParticipanteFromSession,
+  saveSubmissaoQuestionario,
+} from '@/utils/demo-participante'
 
-interface Resposta {
-  perguntaId: number
-  valor: number
+type Pergunta = {
+  id: number
+  texto: string
 }
+
+const perguntasByQuestionario: Record<number, Pergunta[]> = {
+  1: [
+    { id: 1, texto: 'Pouco interesse ou prazer em fazer as coisas' },
+    { id: 2, texto: 'Sentir-se para baixo, deprimido(a) ou sem perspectiva' },
+    { id: 3, texto: 'Dificuldade para dormir ou dormir demais' },
+    { id: 4, texto: 'Sentir-se cansado(a) ou com pouca energia' },
+    { id: 5, texto: 'Falta de apetite ou comer demais' },
+    { id: 6, texto: 'Sentir-se mal consigo mesmo(a)' },
+    { id: 7, texto: 'Dificuldade para se concentrar' },
+    { id: 8, texto: 'Lentidao ou agitacao perceptivel' },
+    { id: 9, texto: 'Pensamentos de autolesao' },
+  ],
+  2: [
+    { id: 1, texto: 'Sentir-se nervoso(a), ansioso(a) ou tenso(a)' },
+    { id: 2, texto: 'Nao conseguir parar de se preocupar' },
+    { id: 3, texto: 'Preocupar-se excessivamente com varias coisas' },
+    { id: 4, texto: 'Dificuldade para relaxar' },
+    { id: 5, texto: 'Inquietacao ou dificuldade para ficar parado(a)' },
+    { id: 6, texto: 'Irritabilidade frequente' },
+    { id: 7, texto: 'Medo de que algo ruim aconteca' },
+  ],
+}
+
+const opcoesPadrao = [
+  { valor: 0, label: 'Nenhuma vez' },
+  { valor: 1, label: 'Alguns dias' },
+  { valor: 2, label: 'Mais da metade dos dias' },
+  { valor: 3, label: 'Quase todos os dias' },
+]
 
 export default function QuestionarioPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { data: session } = useSession()
   const { showNotification } = useNotificationContext()
-  const questionarioId = parseInt(params.id as string)
-  
-  const questionario = useMemo(() => {
-    return QUESTIONARIOS_DEMO.find(q => q.id === questionarioId)
+  const { questionarios, participantes, updateParticipante } = useDemo()
+
+  const questionarioId = Number(params.id || 0)
+  const questionario = useMemo(
+    () => (questionarios as any[]).find((item) => Number(item.id) === questionarioId) || null,
+    [questionarios, questionarioId]
+  )
+
+  const participante = useMemo(
+    () => resolveParticipanteFromSession(session || null, participantes as any),
+    [session, participantes]
+  )
+
+  const participanteKey = useMemo(
+    () => getParticipanteKey(participante as any, session || null),
+    [participante, session]
+  )
+
+  const perguntas = useMemo(() => {
+    const fallback = Array.from({ length: 5 }).map((_, index) => ({ id: index + 1, texto: `Pergunta ${index + 1}` }))
+    return perguntasByQuestionario[questionarioId] || fallback
   }, [questionarioId])
 
-  const [respostas, setRespostas] = useState<Resposta[]>([])
+  const [respostas, setRespostas] = useState<DemoResposta[]>([])
   const [perguntaAtual, setPerguntaAtual] = useState(0)
+  const resetMode = searchParams.get('reset') === '1'
 
-  if (!questionario) {
+  useEffect(() => {
+    if (!participante || !questionarioId) return
+
+    if (resetMode) {
+      deleteSubmissaoQuestionario(participanteKey, questionarioId)
+      setRespostas([])
+      setPerguntaAtual(0)
+      return
+    }
+
+    const submissaoExistente = getSubmissaoByQuestionario(participanteKey, questionarioId)
+    if (!submissaoExistente) return
+
+    setRespostas(submissaoExistente.respostas || [])
+    const perguntaPendenteIndex = perguntas.findIndex(
+      (pergunta) => !(submissaoExistente.respostas || []).some((resposta) => resposta.perguntaId === pergunta.id)
+    )
+    setPerguntaAtual(perguntaPendenteIndex >= 0 ? perguntaPendenteIndex : 0)
+  }, [participante, participanteKey, questionarioId, perguntas, resetMode])
+
+  if (!questionario || !participante) {
     return (
       <>
-        <PageTitle title="Questionário não encontrado" subName="Participante" />
-        <Card>
-          <Card.Body className="text-center py-5">
-            <IconifyIcon icon="iconoir:clipboard-xmark" style={{ fontSize: '64px' }} className="text-muted mb-3" />
-            <h4>Questionário não encontrado</h4>
-            <Link href="/participante">
-              <Button variant="primary" className="mt-3">Voltar</Button>
-            </Link>
-          </Card.Body>
-        </Card>
+        <PageTitle title='Questionario nao encontrado' subName='Participante' />
+        <Alert variant='warning'>Nao foi possivel carregar este questionario no modo demo.</Alert>
+        <Link href='/participante/questionarios'>
+          <Button variant='primary'>Voltar</Button>
+        </Link>
       </>
     )
   }
 
-  // Demo questions
-  const perguntas = [
-    { id: 1, texto: 'Nos últimos 2 meses, com que frequência você se sentiu sem interesse ou prazer em fazer as coisas?' },
-    { id: 2, texto: 'Nos últimos 2 meses, com que frequência você se sentiu para baixo, deprimido(a) ou sem perspectiva?' },
-    { id: 3, texto: 'Nos últimos 2 meses, com que frequência você teve dificuldade para pegar no sono ou permanecer dormindo?' },
-    { id: 4, texto: 'Nos últimos 2 meses, com que frequência você se sentiu cansado(a) ou com pouca energia?' },
-    { id: 5, texto: 'Nos últimos 2 meses, com que frequência você teve falta de apetite ou comeu demais?' },
-  ]
+  const progresso = Math.round((respostas.length / perguntas.length) * 100)
 
-  const opcoes = [
-    { valor: 0, label: 'Nenhuma vez', descricao: 'Nos últimos 2 meses' },
-    { valor: 1, label: 'Alguns dias', descricao: 'Nos últimos 2 meses' },
-    { valor: 2, label: 'Mais da metade dos dias', descricao: 'Nos últimos 2 meses' },
-    { valor: 3, label: 'Quase todos os dias', descricao: 'Nos últimos 2 meses' },
-  ]
+  const respostaAtual = respostas.find((item) => item.perguntaId === perguntas[perguntaAtual].id)
 
-  const progresso = ((perguntaAtual + 1) / perguntas.length) * 100
-
-  const handleResposta = (valor: number) => {
-    const novasRespostas = [...respostas]
-    const index = novasRespostas.findIndex(r => r.perguntaId === perguntas[perguntaAtual].id)
-    
-    if (index >= 0) {
-      novasRespostas[index].valor = valor
-    } else {
-      novasRespostas.push({ perguntaId: perguntas[perguntaAtual].id, valor })
-    }
-    
-    setRespostas(novasRespostas)
-  }
-
-  const handleProxima = () => {
-    if (perguntaAtual < perguntas.length - 1) {
-      setPerguntaAtual(perguntaAtual + 1)
-    } else {
-      // Finalizar
-      const scoreTotal = respostas.reduce((acc, r) => acc + r.valor, 0)
-      showNotification({ 
-        message: `Questionário finalizado! Score: ${scoreTotal}`, 
-        variant: 'success' 
+  const definirResposta = (valor: number, label: string) => {
+    setRespostas((prev) => {
+      const next = prev.filter((item) => item.perguntaId !== perguntas[perguntaAtual].id)
+      next.push({
+        perguntaId: perguntas[perguntaAtual].id,
+        pergunta: perguntas[perguntaAtual].texto,
+        resposta: label,
+        valor,
       })
-      router.push(`/participante/relatorio/${questionarioId}`)
-    }
+      return next
+    })
   }
 
-  const handleAnterior = () => {
-    if (perguntaAtual > 0) {
-      setPerguntaAtual(perguntaAtual - 1)
-    }
-  }
+  const salvarFinal = () => {
+    const score = respostas.reduce((acc, item) => acc + Number(item.valor || 0), 0)
+    const submittedAt = new Date().toISOString()
 
-  const respostaAtual = respostas.find(r => r.perguntaId === perguntas[perguntaAtual].id)?.valor
+    saveSubmissaoQuestionario({
+      participanteKey,
+      participanteId: Number((participante as any).id),
+      questionarioId,
+      score,
+      respostas,
+      submittedAt,
+    })
+
+    const phqAtual = questionarioId === 1 ? score : Number((participante as any).phq9Score || 0)
+    const gadAtual = questionarioId === 2 ? score : Number((participante as any).gad7Score || 0)
+
+    updateParticipante(Number((participante as any).id), {
+      ...(questionarioId === 1 ? { phq9Score: score } : {}),
+      ...(questionarioId === 2 ? { gad7Score: score } : {}),
+      riscoSaude: normalizeRisco(phqAtual, gadAtual),
+      ultimaAvaliacao: submittedAt.split('T')[0],
+    })
+
+    showNotification({ message: `Questionario finalizado. Score ${score}.`, variant: 'success' })
+    router.push(`/participante/relatorio/${questionarioId}`)
+  }
 
   return (
     <>
-      <PageTitle title={questionario.codigo} subName="Questionário" />
+      <PageTitle title={questionario.codigo || 'Questionario'} subName='Participante' />
 
-      {/* Header */}
-      <Card className="mb-4">
+      <Card className='mb-4'>
         <Card.Body>
-          <Row className="align-items-center">
+          <Row className='align-items-center'>
             <Col>
-              <h5 className="mb-1">{questionario.nome}</h5>
-              <p className="text-muted small mb-0">{questionario.descricao}</p>
+              <h5 className='mb-1'>{questionario.nome}</h5>
+              <small className='text-muted'>{questionario.descricao}</small>
             </Col>
-            <Col xs="auto">
-              <Badge bg="primary">
-                {perguntaAtual + 1} de {perguntas.length}
-              </Badge>
+            <Col xs='auto'>
+              <Badge bg='primary'>{perguntaAtual + 1} de {perguntas.length}</Badge>
             </Col>
           </Row>
-          <ProgressBar now={progresso} variant="primary" className="mt-3" style={{ height: '8px' }} />
+          <ProgressBar now={progresso} className='mt-3' />
         </Card.Body>
       </Card>
 
-      {/* Privacy Notice */}
-      <Alert variant="info" className="mb-4">
-        <IconifyIcon icon="iconoir:lock" className="me-2" />
-        <strong>Suas respostas são confidenciais.</strong> Os dados são criptografados e apenas profissionais 
-        de saúde mental autorizados têm acesso, sempre visando o seu bem-estar.
+      <Alert variant='info'>
+        Suas respostas sao confidenciais e usadas somente para acompanhamento no programa.
       </Alert>
 
-      {/* Question */}
-      <Card className="mb-4">
-        <Card.Body className="p-4">
-          <h5 className="mb-4">
-            <Badge bg="primary" className="me-2">{perguntaAtual + 1}</Badge>
+      <Card className='mb-4'>
+        <Card.Body>
+          <h5 className='mb-4'>
+            <Badge bg='secondary' className='me-2'>{perguntaAtual + 1}</Badge>
             {perguntas[perguntaAtual].texto}
           </h5>
 
-          <div className="d-flex flex-column gap-3">
-            {opcoes.map((opcao) => (
-              <Button
+          <div className='d-flex flex-column gap-2'>
+            {opcoesPadrao.map((opcao) => (
+              <Form.Check
                 key={opcao.valor}
-                variant={respostaAtual === opcao.valor ? 'primary' : 'outline-primary'}
-                className="text-start p-3"
-                onClick={() => handleResposta(opcao.valor)}
-              >
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <strong>{opcao.label}</strong>
-                    <small className="d-block text-muted">{opcao.descricao}</small>
-                  </div>
-                  {respostaAtual === opcao.valor && (
-                    <IconifyIcon icon="iconoir:check" className="fs-4" />
-                  )}
-                </div>
-              </Button>
+                id={`opcao-${opcao.valor}`}
+                type='radio'
+                name={`pergunta-${perguntas[perguntaAtual].id}`}
+                className='border rounded p-3'
+                label={opcao.label}
+                checked={Number(respostaAtual?.valor) === opcao.valor}
+                onChange={() => definirResposta(opcao.valor, opcao.label)}
+              />
             ))}
           </div>
         </Card.Body>
       </Card>
 
-      {/* Navigation */}
-      <div className="d-flex justify-content-between">
-        <Button 
-          variant="outline-secondary" 
-          onClick={handleAnterior}
-          disabled={perguntaAtual === 0}
-        >
-          <IconifyIcon icon="iconoir:nav-arrow-left" className="me-1" />
+      <div className='d-flex justify-content-between'>
+        <Button variant='outline-secondary' onClick={() => setPerguntaAtual((prev) => Math.max(0, prev - 1))} disabled={perguntaAtual === 0}>
           Anterior
         </Button>
 
-        <Button 
-          variant="primary" 
-          onClick={handleProxima}
-          disabled={respostaAtual === undefined}
-        >
-          {perguntaAtual < perguntas.length - 1 ? (
-            <>
-              Próxima
-              <IconifyIcon icon="iconoir:nav-arrow-right" className="ms-1" />
-            </>
-          ) : (
-            <>
-              Finalizar
-              <IconifyIcon icon="iconoir:check" className="ms-1" />
-            </>
-          )}
-        </Button>
+        {perguntaAtual < perguntas.length - 1 ? (
+          <Button
+            variant='primary'
+            onClick={() => setPerguntaAtual((prev) => prev + 1)}
+            disabled={!respostaAtual}
+          >
+            Proxima
+          </Button>
+        ) : (
+          <Button variant='success' onClick={salvarFinal} disabled={respostas.length !== perguntas.length}>
+            Finalizar
+          </Button>
+        )}
       </div>
     </>
   )
