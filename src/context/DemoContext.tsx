@@ -1,37 +1,37 @@
 ﻿'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import { 
-  EMPRESAS_DEMO, 
-  PARTICIPANTES_DEMO, 
-  QUESTIONARIOS_DEMO, 
-  PROGRAMAS_DEMO,
-  ALERTAS_DEMO,
-  USUARIOS_DEMO,
-  PERGUNTAS_DEMO,
-  ALTERNATIVAS_DEMO,
-  DIMENSOES_DEMO,
-  GRUPOS_DEMO
-} from '@/assets/data/demo-data'
 import type {
+  DemoAlerta,
+  DemoAlternativa,
+  DemoDimensao,
+  DemoEmpresa,
+  DemoGrupo,
+  DemoIntegrityIssue,
+  DemoDatabase,
+  DemoParticipante,
+  DemoPergunta,
   DemoProgramaComVinculos,
   DemoProgramaEmpresaVinculo,
   DemoProgramaQuestionarioVinculo,
+  DemoQuestionario,
   DemoState,
+  DemoUsuario,
 } from '@/types/demo'
+import { demoDbService } from '@/services/demo-db.service'
 
 interface DemoContextType {
   // Dados
-  empresas: typeof EMPRESAS_DEMO
-  participantes: typeof PARTICIPANTES_DEMO
-  questionarios: typeof QUESTIONARIOS_DEMO
+  empresas: DemoEmpresa[]
+  participantes: DemoParticipante[]
+  questionarios: DemoQuestionario[]
   programas: DemoProgramaComVinculos[]
-  alertas: typeof ALERTAS_DEMO
-  usuarios: typeof USUARIOS_DEMO
-  perguntas: typeof PERGUNTAS_DEMO
-  alternativas: typeof ALTERNATIVAS_DEMO
-  dimensoes: typeof DIMENSOES_DEMO
-  grupos: typeof GRUPOS_DEMO
+  alertas: DemoAlerta[]
+  usuarios: DemoUsuario[]
+  perguntas: DemoPergunta[]
+  alternativas: DemoAlternativa[]
+  dimensoes: DemoDimensao[]
+  grupos: DemoGrupo[]
   
   // Actions Empresas
   addEmpresa: (empresa: any) => void
@@ -104,22 +104,14 @@ interface DemoContextType {
   
   // Salvar ordem completa (hierarquia)
   salvarOrdemQuestionario: (questionarioId: number, estrutura: any[]) => void
+  resetDemoState: () => void
+  validateDemoState: () => DemoIntegrityIssue[]
 }
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined)
-const DEMO_STORAGE_KEY = 'rumosaudavel:demo-state:v1'
 
 const getInitialDemoState = (): DemoState => ({
-  empresas: [...EMPRESAS_DEMO],
-  participantes: [...PARTICIPANTES_DEMO],
-  questionarios: [...QUESTIONARIOS_DEMO],
-  programas: [...PROGRAMAS_DEMO],
-  alertas: [...ALERTAS_DEMO],
-  usuarios: [...USUARIOS_DEMO],
-  perguntas: [...PERGUNTAS_DEMO],
-  alternativas: [...ALTERNATIVAS_DEMO],
-  dimensoes: [...DIMENSOES_DEMO],
-  grupos: [...GRUPOS_DEMO],
+  ...demoDbService.getSeedState(),
 })
 
 const nextNumericId = (items: Array<{ id: number }>) => Math.max(...items.map((item) => item.id), 0) + 1
@@ -179,16 +171,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const rawState = window.localStorage.getItem(DEMO_STORAGE_KEY)
-    if (!rawState) {
-      setHydrated(true)
-      return
-    }
-
     try {
-      const parsedState = JSON.parse(rawState) as Partial<DemoState>
+      const parsedState = demoDbService.getState() as Partial<DemoState>
       const fallbackState = getInitialDemoState()
 
       setEmpresas(parsedState.empresas ?? fallbackState.empresas)
@@ -209,9 +193,9 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!hydrated || typeof window === 'undefined') return
+    if (!hydrated) return
 
-    const stateToPersist: DemoState = {
+    const stateToPersist: DemoDatabase = {
       empresas,
       participantes,
       questionarios,
@@ -222,10 +206,44 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       alternativas,
       dimensoes,
       grupos,
+      estatisticas: demoDbService.getState().estatisticas,
+      evolucao: demoDbService.getState().evolucao,
     }
 
-    window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(stateToPersist))
+    demoDbService.setState(stateToPersist)
   }, [hydrated, empresas, participantes, questionarios, programas, alertas, usuarios, perguntas, alternativas, dimensoes, grupos])
+
+  const resetDemoState = useCallback(() => {
+    const seed = demoDbService.resetState()
+    setEmpresas(seed.empresas)
+    setParticipantes(seed.participantes)
+    setQuestionarios(seed.questionarios)
+    setProgramas(normalizeProgramas(seed.programas as any[]))
+    setAlertas(seed.alertas)
+    setUsuarios(seed.usuarios)
+    setPerguntas(seed.perguntas)
+    setAlternativas(seed.alternativas)
+    setDimensoes(seed.dimensoes)
+    setGrupos(seed.grupos)
+  }, [])
+
+  const validateDemoState = useCallback(() => {
+    const currentState: DemoDatabase = {
+      empresas,
+      participantes,
+      questionarios,
+      programas,
+      alertas,
+      usuarios,
+      perguntas,
+      alternativas,
+      dimensoes,
+      grupos,
+      estatisticas: demoDbService.getState().estatisticas,
+      evolucao: demoDbService.getState().evolucao,
+    }
+    return demoDbService.validateState(currentState)
+  }, [empresas, participantes, questionarios, programas, alertas, usuarios, perguntas, alternativas, dimensoes, grupos])
 
   // Empresas
   const addEmpresa = useCallback((empresa: any) => {
@@ -387,7 +405,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, [programas])
   const getProgramaQuestionarios = useCallback((programaId: number) => {
     const programa = programas.find((p: any) => p.id === programaId) as any
-    return (programa?.questionariosVinculados || []).sort((a: any, b: any) => a.ordem - b.ordem)
+    return (programa?.questionariosVinculados || []).sort((a: any, b: any) => Number(a.ordem || 0) - Number(b.ordem || 0))
   }, [programas])
 
   const setProgramaQuestionarios = useCallback((programaId: number, vinculos: DemoProgramaQuestionarioVinculo[]) => {
@@ -397,7 +415,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         ...p,
         questionariosVinculados: vinculos
           .slice()
-          .sort((a, b) => a.ordem - b.ordem)
+          .sort((a, b) => Number(a.ordem || 0) - Number(b.ordem || 0))
           .map((v, index) => ({ ...v, ordem: index + 1 })),
       }
     }))
@@ -608,7 +626,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const getPerguntasByQuestionario = useCallback((questionarioId: number) => {
-    return perguntas.filter(p => p.id_questionario === questionarioId).sort((a, b) => a.pos - b.pos)
+    return perguntas.filter(p => p.id_questionario === questionarioId).sort((a, b) => Number(a.pos || 0) - Number(b.pos || 0))
   }, [perguntas])
 
   const reorderPerguntas = useCallback((questionarioId: number, newOrder: number[]) => {
@@ -667,7 +685,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const getDimensoesByQuestionario = useCallback((questionarioId: number) => {
-    return dimensoes.filter(d => d.id_questionario === questionarioId).sort((a, b) => a.pos - b.pos)
+    return dimensoes.filter(d => d.id_questionario === questionarioId).sort((a, b) => Number(a.pos || 0) - Number(b.pos || 0))
   }, [dimensoes])
 
   const reorderDimensoes = useCallback((questionarioId: number, newOrder: number[]) => {
@@ -701,11 +719,11 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const getGruposByDimensao = useCallback((dimensaoId: number) => {
-    return grupos.filter(g => g.id_dimensao === dimensaoId).sort((a, b) => a.pos - b.pos)
+    return grupos.filter(g => g.id_dimensao === dimensaoId).sort((a, b) => Number(a.pos || 0) - Number(b.pos || 0))
   }, [grupos])
 
   const getGruposByQuestionario = useCallback((questionarioId: number) => {
-    return grupos.filter(g => g.id_questionario === questionarioId).sort((a, b) => a.pos - b.pos)
+    return grupos.filter(g => g.id_questionario === questionarioId).sort((a, b) => Number(a.pos || 0) - Number(b.pos || 0))
   }, [grupos])
 
   const reorderGrupos = useCallback((dimensaoId: number, newOrder: number[]) => {
@@ -810,6 +828,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       getGruposByQuestionario,
       reorderGrupos,
       salvarOrdemQuestionario,
+      resetDemoState,
+      validateDemoState,
     }}>
       {children}
     </DemoContext.Provider>

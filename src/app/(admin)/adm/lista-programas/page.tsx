@@ -340,127 +340,93 @@ export default function ListaProgramas() {
         </Card.Body>
       </Card>
 
-      <Row>
-        {programasFiltrados.map((programa: any, index: number) => {
+      <div className='d-flex flex-column gap-3'>
+        {programasFiltrados.map((programa: any) => {
           const vinculos = getVinculos(programa)
           return (
-            <Col md={6} xl={4} key={programa.id} className='mb-4'>
-              <Card
-                className='h-100'
-                style={{
-                  opacity: 1,
-                  transform: 'translateY(0)',
-                  transition: 'opacity 0.35s ease, transform 0.35s ease',
-                  transitionDelay: `${index * 45}ms`,
-                }}
-              >
-                <Card.Body>
-                  <div className='d-flex justify-content-between align-items-start mb-2'>
+            <Card key={programa.id} className='overflow-hidden'>
+              <div className='px-4 py-3 border-bottom' style={{ background: '#d6dccf' }}>
+                <div className='d-flex justify-content-between align-items-center gap-3 flex-wrap'>
+                  <div className='d-flex align-items-center gap-3'>
+                    <h4 className='mb-0' style={{ color: '#9c5a00' }}>{programa.nome}</h4>
                     <Badge bg={programa.status === 'ativo' ? 'success' : 'secondary'}>
                       {programa.status === 'ativo' ? 'Ativo' : 'Inativo'}
                     </Badge>
-                    <small className='text-muted'>{formatDate(programa.dataInicio || programa.createdAt)}</small>
                   </div>
 
-                  <h5 className='mb-2'>{programa.nome}</h5>
-                  <p className='text-muted small mb-3' style={{ minHeight: '40px' }}>
-                    {programa.descricao}
-                  </p>
-
-                  <div className='d-flex gap-3 mb-3 text-center'>
-                    <div>
-                      <div className='fw-bold text-primary'>{programa.duracaoMeses || 0}</div>
-                      <small className='text-muted'>Meses</small>
-                    </div>
-                    <div>
-                      <div className='fw-bold text-info'>{vinculos.length}</div>
-                      <small className='text-muted'>Empresas</small>
-                    </div>
-                    <div>
-                      <div className='fw-bold text-success'>{Number(programa.participantesAtivos || 0).toLocaleString()}</div>
-                      <small className='text-muted'>Participantes</small>
-                    </div>
-                  </div>
-
-                  <div className='d-flex gap-2 mb-3'>
-                    <Button variant='outline-primary' size='sm' className='flex-fill' onClick={() => router.push(`/adm/editar-programa/${programa.id}`)}>
-                      <IconifyIcon icon='iconoir:edit-pencil' className='me-1' />
-                      Configurar
+                  <div className='d-flex align-items-center gap-3 flex-wrap'>
+                    <span className='fw-semibold'>{formatDate(programa.dataInicio || programa.createdAt)}</span>
+                    <Button variant='secondary' size='sm' onClick={() => router.push(`/adm/editar-programa/${programa.id}`)}>
+                      configuracao
+                      <IconifyIcon icon='iconoir:settings' className='ms-2' />
                     </Button>
-                    <Button variant='outline-info' size='sm' className='flex-fill' onClick={() => abrirVincularEmpresa(programa.id)}>
-                      <IconifyIcon icon='iconoir:building' className='me-1' />
-                      Vincular Empresa
+                    <Button variant='secondary' size='sm' onClick={() => abrirVincularEmpresa(programa.id)}>
+                      vincular empresa
+                      <IconifyIcon icon='iconoir:briefcase' className='ms-2' />
                     </Button>
                   </div>
+                </div>
+              </div>
 
-                  <div className='border rounded p-2 bg-light-subtle'>
-                    <div className='small fw-semibold mb-2'>Empresas vinculadas</div>
-                    {vinculos.length === 0 && <div className='small text-muted'>Nenhuma empresa vinculada.</div>}
+              <Card.Body className='px-4 py-2'>
+                {vinculos.length === 0 && (
+                  <div className='py-3 text-muted'>Nenhuma empresa vinculada ao programa.</div>
+                )}
 
-                    {vinculos.map((vinculo) => {
-                      const empresa = getEmpresa(vinculo.empresaId)
-                      const nomeEmpresa = empresa?.nome || `Empresa ${vinculo.empresaId}`
-                      const iniciais = nomeEmpresa
-                        .split(' ')
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .map((nome: string) => nome[0]?.toUpperCase())
-                        .join('')
+                {vinculos.map((vinculo) => {
+                  const empresa = getEmpresa(vinculo.empresaId)
+                  const nomeEmpresa = empresa?.nomeCurto || empresa?.nome || `Empresa ${vinculo.empresaId}`
+                  const intervalo = formatIntervalo(vinculo).toLowerCase()
 
-                      return (
-                        <div key={vinculo.id} className='border rounded bg-white p-2 mb-2'>
-                          <div className='d-flex align-items-center mb-2'>
-                            <div
-                              className='rounded-circle d-flex align-items-center justify-content-center text-white fw-bold me-2'
-                              style={{ width: '30px', height: '30px', backgroundColor: '#0d6efd', fontSize: '11px' }}
-                            >
-                              {iniciais || 'E'}
-                            </div>
-                            <div className='small'>
-                              <div className='fw-semibold'>{nomeEmpresa}</div>
-                              <div className='text-muted'>{formatIntervalo(vinculo)}</div>
-                            </div>
-                          </div>
-
-                          <div className='d-flex flex-wrap gap-1'>
-                            <Button variant='outline-secondary' size='sm' onClick={() => abrirAcessoPublico(programa.id, vinculo.id)}>
-                              Acesso Publico
-                            </Button>
-                            <Button variant='outline-primary' size='sm' onClick={() => abrirControleAcesso(programa.id, vinculo)}>
-                              Controlar Acesso
-                            </Button>
-                            <Button variant='outline-info' size='sm' onClick={() => abrirIntervalo(programa.id, vinculo)}>
-                              Configurar Intervalo
-                            </Button>
-                            <Button
-                              variant='outline-danger'
-                              size='sm'
-                              onClick={() => removerVinculoEmpresa(programa.id, vinculo, nomeEmpresa)}
-                            >
-                              Remover vinculo
-                            </Button>
-                          </div>
+                  return (
+                    <div key={vinculo.id} className='d-flex justify-content-between align-items-center py-3 border-bottom gap-3 flex-wrap'>
+                      <div className='d-flex align-items-center gap-3'>
+                        <div
+                          className='rounded-circle d-flex align-items-center justify-content-center'
+                          style={{ width: '40px', height: '40px', background: '#f4f4f4', color: '#d17600' }}
+                        >
+                          <IconifyIcon icon='iconoir:brain' />
                         </div>
-                      )
-                    })}
-                  </div>
+                        <h3 className='mb-0'>{nomeEmpresa}</h3>
+                      </div>
 
-                  <div className='d-flex gap-2 mt-3'>
-                    <Button variant='outline-secondary' size='sm' onClick={() => handleDuplicar(programa)} title='Duplicar' className='flex-fill'>
-                      <IconifyIcon icon='iconoir:copy' className='me-1' />
-                      Duplicar
+                      <div className='d-flex align-items-center gap-2 flex-wrap'>
+                        <span className='fs-4 text-muted'>{intervalo}</span>
+                        <Button variant='secondary' size='sm' onClick={() => abrirAcessoPublico(programa.id, vinculo.id)}>
+                          <IconifyIcon icon='iconoir:link' />
+                        </Button>
+                        <Button variant='secondary' size='sm' onClick={() => abrirControleAcesso(programa.id, vinculo)}>
+                          controlar acessos
+                          <IconifyIcon icon='iconoir:lock' className='ms-2' />
+                        </Button>
+                        <Button variant='secondary' size='sm' onClick={() => abrirIntervalo(programa.id, vinculo)}>
+                          configurar intervalo
+                          <IconifyIcon icon='iconoir:timer' className='ms-2' />
+                        </Button>
+                        <Button variant='secondary' size='sm' onClick={() => removerVinculoEmpresa(programa.id, vinculo, nomeEmpresa)}>
+                          <IconifyIcon icon='iconoir:trash' />
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+
+                <div className='d-flex justify-content-between align-items-center pt-3'>
+                  <small className='text-muted'>{vinculos.length} empresa(s) vinculadas ao programa</small>
+                  <div className='d-flex gap-2'>
+                    <Button variant='outline-secondary' size='sm' onClick={() => handleDuplicar(programa)}>
+                      duplicar
                     </Button>
-                    <Button variant='outline-danger' size='sm' onClick={() => handleDeleteClick(programa)} title='Excluir' className='flex-fill'>
-                      <IconifyIcon icon='iconoir:trash' className='me-1' />
-                      Excluir
+                    <Button variant='outline-danger' size='sm' onClick={() => handleDeleteClick(programa)}>
+                      excluir programa
                     </Button>
                   </div>
-                </Card.Body>
-              </Card>
-            </Col>
+                </div>
+              </Card.Body>
+            </Card>
           )
         })}
-      </Row>
+      </div>
 
       {programasFiltrados.length === 0 && (
         <div className='text-center py-5'>

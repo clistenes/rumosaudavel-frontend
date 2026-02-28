@@ -62,8 +62,8 @@ export const demoEmpresaService = {
     if (params.search) {
       const searchLower = params.search.toLowerCase()
       empresas = empresas.filter(e =>
-        e.nome.toLowerCase().includes(searchLower) ||
-        e.cnpj.includes(params.search || '')
+        String(e.nome || '').toLowerCase().includes(searchLower) ||
+        String(e.cnpj || '').includes(params.search || '')
       )
     }
 
@@ -118,9 +118,9 @@ export const demoEmpresaService = {
     if (params.search) {
       const searchLower = params.search.toLowerCase()
       participantes = participantes.filter(p =>
-        p.nome.toLowerCase().includes(searchLower) ||
-        p.email.toLowerCase().includes(searchLower) ||
-        p.cpf.includes(params.search || '')
+        String(p.nome || '').toLowerCase().includes(searchLower) ||
+        String(p.email || '').toLowerCase().includes(searchLower) ||
+        String(p.cpf || '').includes(params.search || '')
       )
     }
 
@@ -144,9 +144,9 @@ export const demoParticipanteService = {
     if (params.search) {
       const searchLower = params.search.toLowerCase()
       participantes = participantes.filter(p =>
-        p.nome.toLowerCase().includes(searchLower) ||
-        p.email.toLowerCase().includes(searchLower) ||
-        p.cpf.includes(params.search || '')
+        String(p.nome || '').toLowerCase().includes(searchLower) ||
+        String(p.email || '').toLowerCase().includes(searchLower) ||
+        String(p.cpf || '').includes(params.search || '')
       )
     }
 
@@ -223,8 +223,8 @@ export const demoProgramaService = {
     if (params.search) {
       const searchLower = params.search.toLowerCase()
       programas = programas.filter((p: any) =>
-        p.nome.toLowerCase().includes(searchLower) ||
-        p.descricao.toLowerCase().includes(searchLower)
+        String(p.nome || '').toLowerCase().includes(searchLower) ||
+        String(p.descricao || '').toLowerCase().includes(searchLower)
       )
     }
 
@@ -278,8 +278,8 @@ export const demoQuestionarioService = {
     if (params.search) {
       const searchLower = params.search.toLowerCase()
       questionarios = questionarios.filter((q: any) =>
-        q.nome.toLowerCase().includes(searchLower) ||
-        q.descricao.toLowerCase().includes(searchLower)
+        String(q.nome || '').toLowerCase().includes(searchLower) ||
+        String(q.descricao || '').toLowerCase().includes(searchLower)
       )
     }
 

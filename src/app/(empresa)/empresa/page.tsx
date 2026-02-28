@@ -8,7 +8,7 @@ import { useSession } from 'next-auth/react'
 import PageTitle from '@/components/PageTitle'
 import DashboardCards from '@/components/DashboardCards'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
-import { EMPRESAS_DEMO, PARTICIPANTES_DEMO, ALERTAS_DEMO, EVOLUCAO_MENSAL } from '@/assets/data/demo-data'
+import { useDemo } from '@/context/DemoContext'
 import type { DashboardCardProps } from '@/components/DashboardCards'
 
 interface Participante {
@@ -51,6 +51,7 @@ interface EmpresaData {
 export default function EmpresaDashboard() {
   const { data: session } = useSession()
   const router = useRouter()
+  const { empresas, participantes: participantesDb, alertas } = useDemo()
   const [loading, setLoading] = useState(true)
   
   // Get empresa data based on logged-in user
@@ -59,16 +60,16 @@ export default function EmpresaDashboard() {
   }, [session])
 
   const empresa = useMemo(() => {
-    return EMPRESAS_DEMO.find(e => e.id === empresaId) || EMPRESAS_DEMO[0]
-  }, [empresaId])
+    return (empresas as any[]).find(e => Number(e.id) === Number(empresaId)) || (empresas as any[])[0]
+  }, [empresaId, empresas])
 
   const participantes = useMemo(() => {
-    return (PARTICIPANTES_DEMO as Participante[]).filter(p => p.empresaId === empresaId)
-  }, [empresaId])
+    return (participantesDb as Participante[]).filter(p => Number(p.empresaId) === Number(empresaId))
+  }, [empresaId, participantesDb])
 
   const alertasEmpresa = useMemo(() => {
-    return ALERTAS_DEMO.filter(a => a.empresaId === empresaId)
-  }, [empresaId])
+    return (alertas as any[]).filter(a => Number(a.empresaId) === Number(empresaId))
+  }, [empresaId, alertas])
 
   // Calculate statistics
   const stats = useMemo(() => {

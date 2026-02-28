@@ -12,6 +12,7 @@ export { programaService } from './programa.service'
 export { questionarioService } from './questionario.service'
 export { relatorioService } from './relatorio.service'
 export { usuarioService } from './usuario.service'
+export { demoDbService } from './demo-db.service'
 
 // Re-exportar tipos
 export type { 

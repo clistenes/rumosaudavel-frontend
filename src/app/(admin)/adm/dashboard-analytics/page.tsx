@@ -7,14 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import ComponentContainerCard from '@/components/ComponentContainerCard'
-import { 
-  EMPRESAS_DEMO, 
-  PARTICIPANTES_DEMO, 
-  ALERTAS_DEMO,
-  ESTATISTICAS_GLOBAIS,
-  EVOLUCAO_MENSAL,
-  PROGRAMAS_DEMO 
-} from '@/assets/data/demo-data'
+import { useDemo } from '@/context/DemoContext'
 
 interface Metrica {
   label: string
@@ -29,7 +22,46 @@ interface Metrica {
 export default function DashboardAnalyticsPage() {
   const [periodo, setPeriodo] = useState('30d')
   const searchParams = useSearchParams()
+  const { empresas, participantes, alertas, programas } = useDemo()
   const empresaId = searchParams.get('empresa')
+
+  const ESTATISTICAS_GLOBAIS = useMemo(() => {
+    const totalParticipantes = (participantes as any[]).length
+    const participantesRiscoAlto = (participantes as any[]).filter((p) => p.riscoSaude === 'alto').length
+    const participantesRiscoMedio = (participantes as any[]).filter((p) => p.riscoSaude === 'medio').length
+    const participantesRiscoBaixo = totalParticipantes - participantesRiscoAlto - participantesRiscoMedio
+    const phq9MedioGlobal = totalParticipantes > 0
+      ? (participantes as any[]).reduce((acc, p) => acc + Number(p.phq9Score || 0), 0) / totalParticipantes
+      : 0
+    const gad7MedioGlobal = totalParticipantes > 0
+      ? (participantes as any[]).reduce((acc, p) => acc + Number(p.gad7Score || 0), 0) / totalParticipantes
+      : 0
+    const taxaAdesaoMedia = (empresas as any[]).length > 0
+      ? (empresas as any[]).reduce((acc, e) => acc + Number(e.adesao || 0), 0) / (empresas as any[]).length
+      : 0
+
+    return {
+      totalParticipantes,
+      participantesRiscoAlto,
+      participantesRiscoMedio,
+      participantesRiscoBaixo,
+      phq9MedioGlobal,
+      gad7MedioGlobal,
+      taxaAdesaoMedia,
+      avaliacoesRealizadas: 42318,
+      alertasAbertos: (alertas as any[]).filter((item) => item.status === 'pendente').length,
+      satisfacaoGeral: 4.6,
+      retornoInvestimento: 3.2,
+      economiaEstimada: 2450000,
+    }
+  }, [empresas, participantes, alertas])
+
+  const EVOLUCAO_MENSAL = useMemo(() => [
+    { mesNome: 'Novembro/2025', participantesAtivos: Math.max(1, ESTATISTICAS_GLOBAIS.totalParticipantes - 2), avaliacoesRealizadas: 210, phq9Medio: ESTATISTICAS_GLOBAIS.phq9MedioGlobal + 0.4, gad7Medio: ESTATISTICAS_GLOBAIS.gad7MedioGlobal + 0.3, satisfacao: 4.4 },
+    { mesNome: 'Dezembro/2025', participantesAtivos: Math.max(1, ESTATISTICAS_GLOBAIS.totalParticipantes - 1), avaliacoesRealizadas: 220, phq9Medio: ESTATISTICAS_GLOBAIS.phq9MedioGlobal + 0.2, gad7Medio: ESTATISTICAS_GLOBAIS.gad7MedioGlobal + 0.1, satisfacao: 4.5 },
+    { mesNome: 'Janeiro/2026', participantesAtivos: ESTATISTICAS_GLOBAIS.totalParticipantes, avaliacoesRealizadas: 230, phq9Medio: ESTATISTICAS_GLOBAIS.phq9MedioGlobal + 0.1, gad7Medio: ESTATISTICAS_GLOBAIS.gad7MedioGlobal + 0.1, satisfacao: 4.6 },
+    { mesNome: 'Fevereiro/2026', participantesAtivos: ESTATISTICAS_GLOBAIS.totalParticipantes, avaliacoesRealizadas: 245, phq9Medio: ESTATISTICAS_GLOBAIS.phq9MedioGlobal, gad7Medio: ESTATISTICAS_GLOBAIS.gad7MedioGlobal, satisfacao: 4.6 },
+  ], [ESTATISTICAS_GLOBAIS])
 
   if (!empresaId) {
     return (
@@ -89,7 +121,7 @@ export default function DashboardAnalyticsPage() {
 
   // Top empresas por adesão
   const empresasTop = useMemo(() => {
-    return [...EMPRESAS_DEMO]
+    return [...(empresas as any[])]
       .sort((a, b) => b.adesao - a.adesao)
       .slice(0, 5)
       .map((empresa, index) => ({
@@ -101,13 +133,13 @@ export default function DashboardAnalyticsPage() {
         phq9: empresa.phq9Medio,
         gad7: empresa.gad7Medio
       }))
-  }, [])
+  }, [empresas])
 
   // Alertas recentes formatados
   const alertasRecentes = useMemo(() => {
-    return ALERTAS_DEMO.map(alerta => {
-      const empresa = EMPRESAS_DEMO.find(e => e.id === alerta.empresaId)
-      const participante = PARTICIPANTES_DEMO.find(p => p.id === alerta.participanteId)
+    return (alertas as any[]).map(alerta => {
+      const empresa = (empresas as any[]).find(e => Number(e.id) === Number(alerta.empresaId))
+      const participante = (participantes as any[]).find(p => Number(p.id) === Number(alerta.participanteId))
       
       return {
         id: alerta.id,
@@ -122,7 +154,7 @@ export default function DashboardAnalyticsPage() {
         prioridade: alerta.prioridade
       }
     })
-  }, [])
+  }, [alertas, empresas, participantes])
 
   // Calcular distribuição por risco
   const distribuicaoRisco = useMemo(() => {
@@ -156,40 +188,40 @@ export default function DashboardAnalyticsPage() {
       return idade
     }
 
-    const idades = PARTICIPANTES_DEMO.map(p => calcularIdade(p.dataNascimento))
+    const idades = (participantes as any[]).map(p => calcularIdade(String(p.dataNascimento || '2000-01-01')))
     const jovens = idades.filter(i => i >= 18 && i <= 25).length
     const adultos = idades.filter(i => i >= 26 && i <= 40).length
     const maduros = idades.filter(i => i >= 41).length
-    const total = PARTICIPANTES_DEMO.length
+    const total = Math.max(1, (participantes as any[]).length)
 
     return {
       jovens: { valor: jovens, percentual: Math.round((jovens / total) * 100) },
       adultos: { valor: adultos, percentual: Math.round((adultos / total) * 100) },
       maduros: { valor: maduros, percentual: Math.round((maduros / total) * 100) }
     }
-  }, [])
+  }, [participantes])
 
   // Calcular distribuição por gênero
   const distribuicaoGenero = useMemo(() => {
-    const total = PARTICIPANTES_DEMO.length
-    const feminino = PARTICIPANTES_DEMO.filter(p => p.sexo === 'F').length
-    const masculino = PARTICIPANTES_DEMO.filter(p => p.sexo === 'M').length
+    const total = Math.max(1, (participantes as any[]).length)
+    const feminino = (participantes as any[]).filter(p => p.sexo === 'F').length
+    const masculino = (participantes as any[]).filter(p => p.sexo === 'M').length
     
     return {
       feminino: Math.round((feminino / total) * 100),
       masculino: Math.round((masculino / total) * 100)
     }
-  }, [])
+  }, [participantes])
 
   // Estatísticas dos programas
   const statsProgramas = useMemo(() => {
     return {
-      total: PROGRAMAS_DEMO.length,
-      participantes: PROGRAMAS_DEMO.reduce((acc, p) => acc + p.participantesAtivos, 0),
-      avaliacao: (PROGRAMAS_DEMO.reduce((acc, p) => acc + p.avaliacaoMedia, 0) / PROGRAMAS_DEMO.length).toFixed(1),
-      sessoes: PROGRAMAS_DEMO.reduce((acc, p) => acc + p.sessoesRealizadas, 0)
+      total: (programas as any[]).length,
+      participantes: (programas as any[]).reduce((acc, p) => acc + Number(p.participantesAtivos || 0), 0),
+      avaliacao: ((programas as any[]).reduce((acc, p) => acc + Number(p.avaliacaoMedia || 0), 0) / Math.max(1, (programas as any[]).length)).toFixed(1),
+      sessoes: (programas as any[]).reduce((acc, p) => acc + Number(p.sessoesRealizadas || 0), 0)
     }
-  }, [])
+  }, [programas])
 
   return (
     <>
@@ -579,13 +611,13 @@ export default function DashboardAnalyticsPage() {
             <hr />
             
             <h6 className="mb-3">Programas em Destaque</h6>
-            {PROGRAMAS_DEMO.map(programa => (
+            {(programas as any[]).map(programa => (
               <div key={programa.id} className="d-flex justify-content-between align-items-center mb-2">
                 <div>
                   <span className="fw-medium">{programa.nome}</span>
-                  <small className="d-block text-muted">{programa.empresasParticipantes.length} empresas</small>
+                  <small className="d-block text-muted">{(programa.empresasParticipantes || []).length} empresas</small>
                 </div>
-                <Badge bg="primary">{programa.avaliacaoMedia.toFixed(1)} ★</Badge>
+                <Badge bg="primary">{Number(programa.avaliacaoMedia || 0).toFixed(1)} ★</Badge>
               </div>
             ))}
             

@@ -1,62 +1,31 @@
-# 🧪 Modo Demo - Teste sem API
+# Modo Demo
 
-O projeto possui um modo demo que permite testar o sistema **sem precisar do backend Laravel** rodando.
+Este projeto roda com modo demo local por padrao.
 
-## 🚀 Como ativar
+## Estado atual
+- `NEXT_PUBLIC_DEMO_MODE=true` em `.env.local`.
+- Fonte unica de dados demo: `src/assets/data/demo-db.json`.
+- Persistencia: `localStorage` usando chave versionada `rumosaudavel:demo-db:v2`.
+- O estado e gerenciado por `src/services/demo-db.service.ts`.
 
-O modo demo já está ativado por padrão no arquivo `.env.local`:
+## Importante
+- Nao existe rota `/api/demo` no App Router.
+- Em modo demo, o frontend nao deve depender de chamadas HTTP reais para CRUD/fluxo.
+- Os servicos de dominio (`empresa`, `participante`, `programa`, `questionario`) usam a base demo local quando `NEXT_PUBLIC_DEMO_MODE=true`.
 
-```env
-NEXT_PUBLIC_DEMO_MODE=true
-```
+## Credenciais demo
+Acesse `/auth/login`:
+- Admin: `admin` / `admin123`
+- Empresa: `empresa` / `empresa123`
+- Participante: `participante` / `participante123`
 
-## 👤 Credenciais de Teste
-
-Acesse `http://localhost:3000/auth/login` e use uma das contas:
-
-### Administrador (Tipo 1)
-- **Login:** `admin`
-- **Senha:** `admin123`
-- **Acesso:** `/adm` - Dashboard administrativo
-
-### Participante (Tipo 2)
-- **Login:** `participante`
-- **Senha:** `participante123`
-- **Acesso:** `/participante` - Área do participante
-
-### Empresa (Tipo 3)
-- **Login:** `empresa`
-- **Senha:** `empresa123`
-- **Acesso:** `/empresa` - Dashboard da empresa
-
-## 🔧 Como desativar (usar API real)
-
-Para usar o backend Laravel real, altere no `.env.local`:
-
+## Alternar para API real
+Para usar backend real:
 ```env
 NEXT_PUBLIC_DEMO_MODE=false
 NEXT_PUBLIC_API_URL=http://localhost:8000/api
 ```
 
-## 📝 Notas
-
-- No modo demo, as chamadas à API retornarão dados mockados
-- As funcionalidades de CRUD são simuladas (não persistem dados)
-- Perfeito para desenvolvimento frontend e testes de UI
-
-## 🎨 Funcionalidades Testáveis
-
-✅ Login com diferentes perfis  
-✅ Proteção de rotas por tipo de usuário  
-✅ Redirecionamento automático após login  
-✅ Layouts específicos por perfil  
-✅ Logout  
-
----
-
-**Para testar agora:**
-```bash
-yarn dev
-```
-
-Acesse `http://localhost:3000/` e faça login com qualquer conta de teste!
+## Reset do banco demo
+- Pela tela `/demo-funcional` (botao `Resetar banco demo`), ou
+- Via `demoDbService.resetState()`.

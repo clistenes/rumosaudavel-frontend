@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
-import { EMPRESAS_DEMO } from '@/assets/data/demo-data'
 import { useDemo } from '@/context/DemoContext'
 import { useNotificationContext } from '@/context/useNotificationContext'
 import { useParticipantes, useRemoverParticipante } from '@/hooks/api/useParticipantes'
@@ -33,7 +32,7 @@ export default function ListaParticipantes() {
   
   // Dados (Demo ou API)
   const participantes: any[] = demoMode ? demoContext.participantes : (participantesData?.data || [])
-  const empresas: any[] = demoMode ? EMPRESAS_DEMO : (empresasData?.data || [])
+  const empresas: any[] = demoMode ? demoContext.empresas : (empresasData?.data || [])
   
   const [busca, setBusca] = useState('')
   const [filtroEmpresa, setFiltroEmpresa] = useState<string>(empresaFilter || '')
@@ -46,7 +45,7 @@ export default function ListaParticipantes() {
   // Get empresa name by ID
   const getEmpresaNome = (empresaId: number) => {
     const empresa = demoMode 
-      ? EMPRESAS_DEMO.find(e => e.id === empresaId)
+      ? (demoContext.empresas as any[]).find(e => Number(e.id) === Number(empresaId))
       : empresas.find((e: any) => e.id === empresaId)
     return demoMode ? (empresa as any)?.nomeCurto || 'N/A' : (empresa as any)?.nome || 'N/A'
   }
