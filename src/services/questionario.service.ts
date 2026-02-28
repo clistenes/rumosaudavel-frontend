@@ -86,7 +86,62 @@ export const questionarioService = {
     if (params.tipo) queryString.append('tipo', params.tipo)
     if (params.status) queryString.append('status', params.status)
 
-    return http.get(`${API_ENDPOINTS.questionarios.list}?${queryString.toString()}`)
+    const response = await http.get<any>(`${API_ENDPOINTS.questionarios.list}?${queryString.toString()}`)
+
+    // Normaliza respostas heterogêneas da API (array direto, envelope ou objeto)
+    const payload: any = (response as any)?.data ?? response
+    const page = params.page || 1
+    const perPage = params.perPage || 10
+
+    if (Array.isArray(payload)) {
+      const data = payload as Questionario[]
+      return success({
+        data,
+        meta: {
+          page,
+          perPage,
+          total: data.length,
+          totalPages: Math.max(1, Math.ceil(data.length / perPage)),
+        },
+      } as PaginatedResponse<Questionario>)
+    }
+
+    if (payload && typeof payload === 'object' && Array.isArray(payload.data)) {
+      const maybeMeta = payload.meta || {}
+      const data = payload.data as Questionario[]
+      return success({
+        data,
+        meta: {
+          page: Number(maybeMeta.page ?? maybeMeta.current_page ?? page),
+          perPage: Number(maybeMeta.perPage ?? maybeMeta.per_page ?? perPage),
+          total: Number(maybeMeta.total ?? data.length),
+          totalPages: Number(maybeMeta.totalPages ?? maybeMeta.last_page ?? Math.max(1, Math.ceil(data.length / perPage))),
+        },
+      } as PaginatedResponse<Questionario>)
+    }
+
+    if (payload && typeof payload === 'object') {
+      const data = [payload as Questionario]
+      return success({
+        data,
+        meta: {
+          page,
+          perPage,
+          total: data.length,
+          totalPages: 1,
+        },
+      } as PaginatedResponse<Questionario>)
+    }
+
+    return success({
+      data: [],
+      meta: {
+        page,
+        perPage,
+        total: 0,
+        totalPages: 1,
+      },
+    } as PaginatedResponse<Questionario>)
   },
 
   async buscarPorId(id: number): Promise<ApiResponse<Questionario>> {
