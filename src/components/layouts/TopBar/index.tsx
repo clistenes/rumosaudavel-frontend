@@ -2,7 +2,6 @@ import React from 'react'
 import Language from './components/Language'
 import ThemeToggle from './components/ThemeToggle'
 import Notification from './components/Notification'
-import ProfileDropdown from './components/ProfileDropdown'
 import LeftSideBarToggle from './components/LeftSideBarToggle'
 
 const TopBar = () => {
@@ -21,7 +20,6 @@ const TopBar = () => {
           
             <ThemeToggle />
             {/* <Notification /> */}
-            <ProfileDropdown />
           </ul>
         </nav>
       </div>

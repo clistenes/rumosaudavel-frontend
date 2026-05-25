@@ -391,7 +391,7 @@ export default function ListaProgramas() {
   if (!demoMode && loadingProgramas) {
     return (
       <>
-        <PageTitle title='Programas de Saude' subName='Programas' />
+        <PageTitle title='Programas' subName='Programas' />
         <div className='d-flex justify-content-center align-items-center' style={{ height: '400px' }}>
           <Spinner animation='border' variant='primary' />
         </div>
@@ -402,7 +402,7 @@ export default function ListaProgramas() {
   if (!demoMode && error) {
     return (
       <>
-        <PageTitle title='Programas de Saude' subName='Programas' />
+        <PageTitle title='Programas' subName='Programas' />
         <Card className='text-center py-5'>
           <Card.Body>
             <IconifyIcon icon='iconoir:wifi-off' style={{ fontSize: '48px' }} className='text-danger mb-3' />
@@ -426,7 +426,7 @@ export default function ListaProgramas() {
 
   return (
     <>
-      <PageTitle title='Programas de Saude' subName='Programas' />
+      <PageTitle title='Programas' subName='Programas' />
 
       <Card className='mb-4'>
         <Card.Body>
@@ -477,10 +477,6 @@ export default function ListaProgramas() {
 
                   <div className='d-flex align-items-center gap-3 flex-wrap'>
                     <span className='fw-semibold'>{formatDate(programa.dataInicio || programa.createdAt)}</span>
-                    <Button variant='secondary' size='sm' onClick={() => router.push(`/adm/editar-programa/${programa.id}`)}>
-                      configuracao
-                      <IconifyIcon icon='iconoir:settings' className='ms-2' />
-                    </Button>
                     <Button variant='secondary' size='sm' onClick={() => abrirVincularEmpresa(programa.id)}>
                       vincular empresa
                       <IconifyIcon icon='iconoir:briefcase' className='ms-2' />

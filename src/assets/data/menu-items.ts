@@ -9,25 +9,6 @@ export const MENU_ITEMS_ADMIN: MenuItemType[] = [
     url: '/inicio',
   },
   {
-    key: 'questionarios',
-    label: 'Questionários',
-    icon: 'iconoir:paste-clipboard',
-    children: [
-      {
-        key: 'novo-questionario',
-        label: 'Novo Questionário',
-        url: '/questionarios/novo-questionario',
-        parentKey: 'questionarios',
-      },
-      {
-        key: 'todos-questionario',
-        label: 'Todos Questionários',
-        url: '/questionarios/todos-questionarios',
-        parentKey: 'questionarios',
-      },
-    ]
-  },
-  {
     key: 'programas',
     label: 'Programas',
     icon: 'iconoir:suitcase',
@@ -43,74 +24,6 @@ export const MENU_ITEMS_ADMIN: MenuItemType[] = [
         label: 'Todos Programas',
         url: '/programas/todos-programas',
         parentKey: 'programas',
-      },
-    ]
-  },
-  {
-    key: 'empresas',
-    label: 'Empresas',
-    icon: 'iconoir:building',
-    children: [
-      {
-        key: 'dados-empresa',
-        label: 'Dados das Empresas',
-        url: '/adm/lista-empresas',
-        parentKey: 'empresas',
-      },
-      {
-        key: 'nova-empresa',
-        label: 'Nova Empresa',
-        url: '/adm/adicionar-empresa',
-        parentKey: 'empresas',
-      },
-      {
-        key: 'novo-usuario-empresa',
-        label: 'Novo Acesso',
-        url: '/empresas/novo-usuario-empresa',
-        parentKey: 'empresas',
-      },
-      {
-        key: 'pesquisar-usuario',
-        label: 'Pesquisar Usuário',
-        url: '/empresas/pesquisar-usuario',
-        parentKey: 'empresas',
-      },
-      {
-        key: 'termo-consentimento',
-        label: 'Termo de Consentimento',
-        url: '/empresas/termo-consentimento',
-        parentKey: 'empresas',
-      },
-    ]
-  },
-  {
-    key: 'configuracoes-menu',
-    label: 'Configurações',
-    icon: 'iconoir:settings',
-    url: '/adm/configuracoes',
-  },
-  {
-    key: 'adm',
-    label: 'Administração',
-    icon: 'iconoir:building',
-    children: [
-      {
-        key: 'lista-acessos',
-        label: 'Lista de Acessos',
-        url: '/adm/lista-acessos',
-        parentKey: 'adm',
-      },
-      {
-        key: 'logs',
-        label: 'Logs',
-        url: '/adm/logs',
-        parentKey: 'adm',
-      },
-      {
-        key: 'ajuda',
-        label: 'Ajuda',
-        url: '/adm/ajuda',
-        parentKey: 'adm',
       },
     ]
   },
