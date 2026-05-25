@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, Button, Badge, Form, InputGroup, Row, Col, Modal, Spinner, Table } from 'react-bootstrap'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -8,7 +8,9 @@ import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import { useDemo } from '@/context/DemoContext'
 import { useNotificationContext } from '@/context/useNotificationContext'
-import { useProgramas, useRemoverPrograma } from '@/hooks/api/useProgramas'
+import { useEmpresas } from '@/hooks/api/useEmpresas'
+import { useDuplicarPrograma, useProgramas, useRemoverPrograma, useVincularEmpresaPrograma } from '@/hooks/api/useProgramas'
+import { programaService, type EmpresaVinculadaPrograma } from '@/services'
 import { isDemoMode } from '@/utils/env'
 import type { DemoProgramaEmpresaVinculo } from '@/types/demo'
 
@@ -27,6 +29,12 @@ const formatDate = (value?: string | null) => {
   return parsed.toLocaleDateString('pt-BR')
 }
 
+const toApiDate = (value: string) => {
+  const [year, month, day] = value.split('-')
+  if (!year || !month || !day) return value
+  return `${day}/${month}/${year}`
+}
+
 const formatIntervalo = (vinculo: DemoProgramaEmpresaVinculo) => {
   if (vinculo.indeterminado) return 'Indeterminado'
   if (!vinculo.intervaloInicio || !vinculo.intervaloFim) return 'Intervalo nao definido'
@@ -40,10 +48,13 @@ export default function ListaProgramas() {
   const demoContext = useDemo()
 
   const { data: programasData, loading: loadingProgramas, error, refetch } = useProgramas({ perPage: 100 })
+  const { data: empresasData } = useEmpresas({ perPage: 200 })
   const { mutateAsync: removerPrograma } = useRemoverPrograma()
+  const { mutateAsync: duplicarPrograma } = useDuplicarPrograma()
+  const { mutateAsync: vincularEmpresaPrograma } = useVincularEmpresaPrograma()
 
   const programas: any[] = demoMode ? demoContext.programas : (programasData?.data || [])
-  const empresas: any[] = demoMode ? demoContext.empresas : []
+  const empresas: any[] = demoMode ? demoContext.empresas : (empresasData?.data || [])
   const usuarios: any[] = demoMode ? demoContext.usuarios : []
 
   const [busca, setBusca] = useState('')
@@ -68,6 +79,9 @@ export default function ListaProgramas() {
   const [selectedAcessoUsuarios, setSelectedAcessoUsuarios] = useState<{ programaId: number; vinculoId: number; empresaId: number } | null>(null)
   const [buscaUsuarios, setBuscaUsuarios] = useState('')
   const [usuariosSelecionados, setUsuariosSelecionados] = useState<number[]>([])
+  const [empresasVinculadasPorPrograma, setEmpresasVinculadasPorPrograma] = useState<Record<number, EmpresaVinculadaPrograma[]>>({})
+  const [loadingVinculosPorPrograma, setLoadingVinculosPorPrograma] = useState<Record<number, boolean>>({})
+  const [vinculosVersion, setVinculosVersion] = useState(0)
 
   const programasFiltrados = useMemo(() => {
     return programas.filter((p: any) => {
@@ -80,8 +94,73 @@ export default function ListaProgramas() {
     })
   }, [programas, busca, filtroStatus])
 
+  const programaIdsKey = useMemo(
+    () => programas.map((programa: any) => Number(programa.id)).sort((a, b) => a - b).join(','),
+    [programas]
+  )
+
+  useEffect(() => {
+    if (demoMode || programas.length === 0) {
+      setEmpresasVinculadasPorPrograma({})
+      setLoadingVinculosPorPrograma({})
+      return
+    }
+
+    let ativo = true
+    const initialLoadingState = Object.fromEntries(
+      programas.map((programa: any) => [Number(programa.id), true])
+    ) as Record<number, boolean>
+    setLoadingVinculosPorPrograma(initialLoadingState)
+
+    const carregarVinculosPorPrograma = async (programaId: number) => {
+      let empresasVinculadas: EmpresaVinculadaPrograma[] = []
+
+      try {
+        const response = await programaService.listarEmpresasVinculadas(programaId)
+        empresasVinculadas = Array.isArray(response.data) ? response.data : []
+      } catch (error) {
+        console.error(error)
+      }
+
+      if (!ativo) return
+
+      setEmpresasVinculadasPorPrograma((prev) => ({
+        ...prev,
+        [programaId]: empresasVinculadas,
+      }))
+      setLoadingVinculosPorPrograma((prev) => ({
+        ...prev,
+        [programaId]: false,
+      }))
+    }
+
+    programas.forEach((programa: any) => {
+      void carregarVinculosPorPrograma(Number(programa.id))
+    })
+
+    return () => {
+      ativo = false
+    }
+  }, [demoMode, programaIdsKey, vinculosVersion])
+
   const getVinculos = (programa: any): DemoProgramaEmpresaVinculo[] => {
-    if (!demoMode) return (programa.empresasVinculadas || []) as DemoProgramaEmpresaVinculo[]
+    if (!demoMode) {
+      const empresasVinculadas = empresasVinculadasPorPrograma[Number(programa.id)] || []
+      const timestamp = new Date().toISOString()
+
+      return empresasVinculadas.map((empresa) => ({
+        id: Number(empresa.id),
+        empresaId: Number(empresa.id),
+        intervaloInicio: empresa.intervalo_inicio || null,
+        intervaloFim: empresa.intervalo_termino || null,
+        indeterminado: !empresa.intervalo_inicio || !empresa.intervalo_termino,
+        acessoPublicoAtivo: false,
+        usuariosPermitidos: [],
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        nomeEmpresa: empresa.nome,
+      })) as DemoProgramaEmpresaVinculo[]
+    }
     return demoContext.getProgramaEmpresas(programa.id)
   }
 
@@ -94,10 +173,6 @@ export default function ListaProgramas() {
   }
 
   const abrirVincularEmpresa = (programaId: number) => {
-    if (!demoMode) {
-      showNotification({ message: 'Disponivel apenas no modo demo.', variant: 'warning' })
-      return
-    }
     setProgramaVincularId(programaId)
     setEmpresaSelecionada('')
     setShowVincularModal(true)
@@ -111,16 +186,30 @@ export default function ListaProgramas() {
     return empresas.filter((empresa: any) => !vinculadas.has(Number(empresa.id)))
   }, [programaVincularId, programas, empresas, demoMode])
 
-  const confirmarVinculoEmpresa = () => {
+  const confirmarVinculoEmpresa = async () => {
     if (!programaVincularId || !empresaSelecionada) {
       showNotification({ message: 'Selecione uma empresa para vincular.', variant: 'warning' })
       return
     }
 
-    demoContext.vincularEmpresaPrograma(programaVincularId, Number(empresaSelecionada))
-    setShowVincularModal(false)
-    setEmpresaSelecionada('')
-    showNotification({ message: 'Empresa vinculada ao programa com sucesso.', variant: 'success' })
+    try {
+      if (demoMode) {
+        demoContext.vincularEmpresaPrograma(programaVincularId, Number(empresaSelecionada))
+      } else {
+        await vincularEmpresaPrograma({
+          programaId: programaVincularId,
+          empresaId: Number(empresaSelecionada),
+        })
+        await refetch()
+        setVinculosVersion((prev) => prev + 1)
+      }
+
+      setShowVincularModal(false)
+      setEmpresaSelecionada('')
+      showNotification({ message: 'Empresa vinculada ao programa com sucesso.', variant: 'success' })
+    } catch {
+      showNotification({ message: 'Nao foi possivel vincular a empresa.', variant: 'danger' })
+    }
   }
 
   const abrirAcessoPublico = (programaId: number, vinculoId: number) => {
@@ -150,14 +239,36 @@ export default function ListaProgramas() {
       }
     }
 
-    demoContext.atualizarIntervaloEmpresaPrograma(selectedIntervalo.programaId, selectedIntervalo.vinculoId, {
-      indeterminado: intervaloIndeterminado,
-      intervaloInicio: intervaloIndeterminado ? null : intervaloInicio,
-      intervaloFim: intervaloIndeterminado ? null : intervaloFim,
-    })
+    if (demoMode) {
+      demoContext.atualizarIntervaloEmpresaPrograma(selectedIntervalo.programaId, selectedIntervalo.vinculoId, {
+        indeterminado: intervaloIndeterminado,
+        intervaloInicio: intervaloIndeterminado ? null : intervaloInicio,
+        intervaloFim: intervaloIndeterminado ? null : intervaloFim,
+      })
 
-    setShowIntervaloModal(false)
-    showNotification({ message: 'Intervalo atualizado com sucesso.', variant: 'success' })
+      setShowIntervaloModal(false)
+      showNotification({ message: 'Intervalo atualizado com sucesso.', variant: 'success' })
+      return
+    }
+
+    void (async () => {
+      try {
+        if (intervaloIndeterminado) {
+          await programaService.resetarIntervaloEmpresa(selectedIntervalo.programaId, selectedIntervalo.vinculoId)
+        } else {
+          await programaService.definirIntervaloEmpresa(selectedIntervalo.programaId, selectedIntervalo.vinculoId, {
+            inicio: toApiDate(intervaloInicio),
+            termino: toApiDate(intervaloFim),
+          })
+        }
+
+        setVinculosVersion((prev) => prev + 1)
+        setShowIntervaloModal(false)
+        showNotification({ message: 'Intervalo atualizado com sucesso.', variant: 'success' })
+      } catch {
+        showNotification({ message: 'Erro ao definir intervalo. Tente novamente.', variant: 'danger' })
+      }
+    })()
   }
 
   const abrirControleAcesso = (programaId: number, vinculo: DemoProgramaEmpresaVinculo) => {
@@ -252,7 +363,7 @@ export default function ListaProgramas() {
     }
   }
 
-  const handleDuplicar = (programa: any) => {
+  const handleDuplicar = async (programa: any) => {
     if (demoMode) {
       demoContext.duplicarPrograma(programa.id)
       showNotification({
@@ -261,10 +372,20 @@ export default function ListaProgramas() {
       })
       return
     }
-    showNotification({
-      message: 'Funcao de duplicar nao disponivel em producao ainda.',
-      variant: 'warning',
-    })
+
+    try {
+      await duplicarPrograma(programa.id)
+      await refetch()
+      showNotification({
+        message: `Programa "${programa.nome}" duplicado com sucesso.`,
+        variant: 'success',
+      })
+    } catch {
+      showNotification({
+        message: 'Erro ao duplicar programa. Tente novamente.',
+        variant: 'danger',
+      })
+    }
   }
 
   if (!demoMode && loadingProgramas) {
@@ -369,13 +490,20 @@ export default function ListaProgramas() {
               </div>
 
               <Card.Body className='px-4 py-2'>
-                {vinculos.length === 0 && (
+                {!demoMode && loadingVinculosPorPrograma[Number(programa.id)] && (
+                  <div className='py-3 d-flex align-items-center gap-2 text-muted'>
+                    <Spinner animation='border' size='sm' />
+                    <span>Carregando empresas vinculadas...</span>
+                  </div>
+                )}
+
+                {vinculos.length === 0 && !loadingVinculosPorPrograma[Number(programa.id)] && (
                   <div className='py-3 text-muted'>Nenhuma empresa vinculada ao programa.</div>
                 )}
 
                 {vinculos.map((vinculo) => {
                   const empresa = getEmpresa(vinculo.empresaId)
-                  const nomeEmpresa = empresa?.nomeCurto || empresa?.nome || `Empresa ${vinculo.empresaId}`
+                  const nomeEmpresa = (vinculo as any).nomeEmpresa || empresa?.nomeCurto || empresa?.nome || `Empresa ${vinculo.empresaId}`
                   const intervalo = formatIntervalo(vinculo).toLowerCase()
 
                   return (
@@ -392,20 +520,30 @@ export default function ListaProgramas() {
 
                       <div className='d-flex align-items-center gap-2 flex-wrap'>
                         <span className='fs-4 text-muted'>{intervalo}</span>
-                        <Button variant='secondary' size='sm' onClick={() => abrirAcessoPublico(programa.id, vinculo.id)}>
-                          <IconifyIcon icon='iconoir:link' />
-                        </Button>
-                        <Button variant='secondary' size='sm' onClick={() => abrirControleAcesso(programa.id, vinculo)}>
-                          controlar acessos
-                          <IconifyIcon icon='iconoir:lock' className='ms-2' />
-                        </Button>
-                        <Button variant='secondary' size='sm' onClick={() => abrirIntervalo(programa.id, vinculo)}>
-                          configurar intervalo
-                          <IconifyIcon icon='iconoir:timer' className='ms-2' />
-                        </Button>
-                        <Button variant='secondary' size='sm' onClick={() => removerVinculoEmpresa(programa.id, vinculo, nomeEmpresa)}>
-                          <IconifyIcon icon='iconoir:trash' />
-                        </Button>
+                        {demoMode && (
+                          <>
+                            <Button variant='secondary' size='sm' onClick={() => abrirAcessoPublico(programa.id, vinculo.id)}>
+                              <IconifyIcon icon='iconoir:link' />
+                            </Button>
+                            <Button variant='secondary' size='sm' onClick={() => abrirControleAcesso(programa.id, vinculo)}>
+                              controlar acessos
+                              <IconifyIcon icon='iconoir:lock' className='ms-2' />
+                            </Button>
+                            <Button variant='secondary' size='sm' onClick={() => abrirIntervalo(programa.id, vinculo)}>
+                              configurar intervalo
+                              <IconifyIcon icon='iconoir:timer' className='ms-2' />
+                            </Button>
+                            <Button variant='secondary' size='sm' onClick={() => removerVinculoEmpresa(programa.id, vinculo, nomeEmpresa)}>
+                              <IconifyIcon icon='iconoir:trash' />
+                            </Button>
+                          </>
+                        )}
+                        {!demoMode && (
+                          <Button variant='secondary' size='sm' onClick={() => abrirIntervalo(programa.id, vinculo)}>
+                            configurar intervalo
+                            <IconifyIcon icon='iconoir:timer' className='ms-2' />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )

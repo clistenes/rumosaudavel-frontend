@@ -16,7 +16,8 @@ export { demoDbService } from './demo-db.service'
 
 // Re-exportar tipos
 export type { 
-  ListarEmpresasParams 
+  ListarEmpresasParams,
+  EmpresaDashboardData,
 } from './empresa.service'
 export type {
   Empresa,
@@ -31,6 +32,7 @@ export type {
 export type { 
   ListarProgramasParams,
   CriarProgramaData,
+  EmpresaVinculadaPrograma,
   VincularQuestionarioData 
 } from './programa.service'
 export type { 

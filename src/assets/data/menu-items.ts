@@ -54,13 +54,13 @@ export const MENU_ITEMS_ADMIN: MenuItemType[] = [
       {
         key: 'dados-empresa',
         label: 'Dados das Empresas',
-        url: '/empresas/dados-empresas',
+        url: '/adm/lista-empresas',
         parentKey: 'empresas',
       },
       {
         key: 'nova-empresa',
         label: 'Nova Empresa',
-        url: '/empresas/nova-empresa',
+        url: '/adm/adicionar-empresa',
         parentKey: 'empresas',
       },
       {

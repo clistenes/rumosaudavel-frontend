@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Hooks específicos para Empresas
  */
 
@@ -22,23 +22,33 @@ export function useEmpresa(id: number | null) {
     if (!id) throw new Error('ID não fornecido')
     return empresaService.buscarPorId(id)
   }, [id])
-  
+
   return useFetch(
     fetchFn,
     !!id // Só executa se tiver ID
   )
 }
 
+// Hook para obter dashboard da empresa
+export function useEmpresaDashboard(empresaId: number | null) {
+  const fetchFn = useCallback(() => {
+    if (!empresaId) throw new Error('ID da empresa nao fornecido')
+    return empresaService.dashboard(empresaId)
+  }, [empresaId])
+
+  return useFetch(fetchFn, !!empresaId)
+}
+
 // Hook para criar empresa
 export function useCriarEmpresa() {
-  return useMutation((data: Parameters<typeof empresaService.criar>[0]) => 
+  return useMutation((data: Parameters<typeof empresaService.criar>[0]) =>
     empresaService.criar(data)
   )
 }
 
 // Hook para atualizar empresa
 export function useAtualizarEmpresa() {
-  return useMutation((params: UpdateEmpresaParams) => 
+  return useMutation((params: UpdateEmpresaParams) =>
     empresaService.atualizar(params.id, params)
   )
 }
@@ -54,7 +64,7 @@ export function useParticipantesEmpresa(empresaId: number | null, params: { sear
     if (!empresaId) throw new Error('ID da empresa não fornecido')
     return empresaService.listarParticipantes(empresaId, params)
   }, [empresaId, JSON.stringify(params)])
-  
+
   return usePaginatedFetch(
     (page, perPage) => {
       if (!empresaId) throw new Error('ID da empresa não fornecido')

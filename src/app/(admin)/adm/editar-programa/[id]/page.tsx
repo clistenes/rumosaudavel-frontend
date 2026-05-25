@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, Badge, Button, Card, Col, Form, ListGroup, Row, Tab, Table, Tabs } from 'react-bootstrap'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import IconifyIcon from '@/components/wrappers/IconifyIcon'
 import PageTitle from '@/components/PageTitle'
 import ComponentContainerCard from '@/components/ComponentContainerCard'
 import { useDemo } from '@/context/DemoContext'
 import { useNotificationContext } from '@/context/useNotificationContext'
-import { useAtualizarPrograma } from '@/hooks/api/useProgramas'
+import { useQuestionarios } from '@/hooks/api/useQuestionarios'
+import { useAtualizarPrograma, usePrograma } from '@/hooks/api/useProgramas'
 import { isDemoMode } from '@/utils/env'
 
 type Intervalo = {
@@ -20,15 +21,23 @@ type Intervalo = {
 }
 
 export default function EditarProgramaPage() {
-  const router = useRouter()
   const params = useParams()
-  const programaId = parseInt(params.id as string)
+  const programaId = Number(params.id as string)
   const { showNotification } = useNotificationContext()
   const demoMode = isDemoMode()
   const { programas, questionarios, updatePrograma } = useDemo()
   const { mutateAsync: atualizarPrograma, loading: salvando } = useAtualizarPrograma()
+  const {
+    data: programaApi,
+    loading: loadingProgramaApi,
+    error: errorProgramaApi,
+  } = usePrograma(!demoMode && Number.isFinite(programaId) ? programaId : null)
+  const { data: questionariosApiData } = useQuestionarios({ perPage: 200 })
 
-  const programa = useMemo(() => programas.find((p: any) => p.id === programaId), [programas, programaId])
+  const programa = useMemo(
+    () => (demoMode ? programas.find((p: any) => Number(p.id) === Number(programaId)) : (programaApi as any)),
+    [demoMode, programas, programaApi, programaId]
+  )
 
   const [activeTab, setActiveTab] = useState('dados')
   const [nome, setNome] = useState('')
@@ -41,7 +50,7 @@ export default function EditarProgramaPage() {
     if (!programa) return
 
     setNome(programa.nome || '')
-    setDescricao(programa.descricao || '')
+    setDescricao(programa.descricao || programa.introducao || '')
     setStatus(programa.status || 'ativo')
 
     const vinculados = ((programa as any).questionariosVinculados || [])
@@ -54,11 +63,18 @@ export default function EditarProgramaPage() {
   }, [programa])
 
   const questionariosDisponiveis = useMemo(() => {
-    return questionarios.filter((q: any) => q.status === 'ativo')
-  }, [questionarios])
+    if (demoMode) {
+      return questionarios.filter((q: any) => q.status === 'ativo')
+    }
+
+    const listaApi = questionariosApiData?.data || []
+    return listaApi.filter((q: any) => String(q.status || 'ativo') === 'ativo')
+  }, [demoMode, questionarios, questionariosApiData])
 
   const toggleQuestionario = (id: number) => {
-    setQuestionariosSelecionados(prev => prev.includes(id) ? prev.filter(q => q !== id) : [...prev, id])
+    setQuestionariosSelecionados((prev) =>
+      prev.includes(id) ? prev.filter((q) => q !== id) : [...prev, id]
+    )
   }
 
   const moveUp = (index: number) => {
@@ -76,23 +92,27 @@ export default function EditarProgramaPage() {
   }
 
   const adicionarIntervalo = () => {
-    setIntervalos(prev => [...prev, {
-      id: Date.now(),
-      nome: 'Novo intervalo',
-      dias: 30,
-      cor: '#6c757d',
-    }])
+    setIntervalos((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        nome: 'Novo intervalo',
+        dias: 30,
+        cor: '#6c757d',
+      },
+    ])
   }
 
   const removerIntervalo = (id: number) => {
-    setIntervalos(prev => prev.filter(i => i.id !== id))
+    setIntervalos((prev) => prev.filter((i) => i.id !== id))
   }
 
   const atualizarIntervalo = (id: number, campo: keyof Intervalo, valor: string | number) => {
-    setIntervalos(prev => prev.map(i => i.id === id ? { ...i, [campo]: valor } : i))
+    setIntervalos((prev) => prev.map((i) => (i.id === id ? { ...i, [campo]: valor } : i)))
   }
 
-  const getQuestionarioById = (id: number) => questionariosDisponiveis.find((q: any) => q.id === id)
+  const getQuestionarioById = (id: number) =>
+    questionariosDisponiveis.find((q: any) => Number(q.id) === Number(id))
 
   const handleSalvar = async () => {
     if (!programa) return
@@ -116,19 +136,39 @@ export default function EditarProgramaPage() {
       if (demoMode) {
         updatePrograma(programaId, payload)
       } else {
-        await atualizarPrograma({ id: programaId, data: payload as any })
+        await atualizarPrograma({
+          id: programaId,
+          data: {
+            nome,
+            introducao: descricao,
+            questionarios: questionariosSelecionados,
+            ordenacao_questionarios: questionariosSelecionados.join(','),
+          },
+        })
       }
+
       showNotification({ message: 'Programa atualizado com sucesso!', variant: 'success' })
     } catch {
       showNotification({ message: 'Erro ao atualizar programa. Tente novamente.', variant: 'danger' })
     }
   }
 
+  if (!demoMode && loadingProgramaApi) {
+    return (
+      <>
+        <PageTitle title='Editar Programa' subName='Programas' />
+        <div className='d-flex justify-content-center align-items-center' style={{ minHeight: '220px' }}>
+          <div className='spinner-border text-primary' role='status' />
+        </div>
+      </>
+    )
+  }
+
   if (!programa) {
     return (
       <>
         <PageTitle title='Editar Programa' subName='Programas' />
-        <Alert variant='warning'>Programa não encontrado.</Alert>
+        <Alert variant='warning'>{errorProgramaApi?.message || 'Programa nao encontrado.'}</Alert>
       </>
     )
   }
@@ -139,7 +179,7 @@ export default function EditarProgramaPage() {
 
       <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k || 'dados')} className='mb-3'>
         <Tab eventKey='dados' title='Dados'>
-          <ComponentContainerCard title='Informações do Programa'>
+          <ComponentContainerCard title='Informacoes do Programa'>
             <Row>
               <Col md={8}>
                 <Form>
@@ -149,7 +189,7 @@ export default function EditarProgramaPage() {
                       <Form.Control type='text' value={nome} onChange={(e) => setNome(e.target.value)} />
                     </Col>
                     <Col md={12} className='mb-3'>
-                      <Form.Label>Descrição</Form.Label>
+                      <Form.Label>Descricao</Form.Label>
                       <Form.Control as='textarea' rows={4} value={descricao} onChange={(e) => setDescricao(e.target.value)} />
                     </Col>
                     <Col md={6} className='mb-3'>
@@ -167,10 +207,10 @@ export default function EditarProgramaPage() {
               <Col md={4}>
                 <Card className='bg-light'>
                   <Card.Body>
-                    <h6>Estatísticas</h6>
+                    <h6>Estatisticas</h6>
                     <div className='mb-2'><small className='text-muted'>Empresas:</small><div className='fw-bold'>{programa.empresasParticipantes?.length || 0}</div></div>
                     <div className='mb-2'><small className='text-muted'>Participantes:</small><div className='fw-bold'>{programa.participantesAtivos || 0}</div></div>
-                    <div className='mb-2'><small className='text-muted'>Questionários:</small><div className='fw-bold'>{questionariosSelecionados.length}</div></div>
+                    <div className='mb-2'><small className='text-muted'>Questionarios:</small><div className='fw-bold'>{questionariosSelecionados.length}</div></div>
                   </Card.Body>
                 </Card>
               </Col>
@@ -178,12 +218,12 @@ export default function EditarProgramaPage() {
           </ComponentContainerCard>
         </Tab>
 
-        <Tab eventKey='questionarios' title='Questionários'>
-          <ComponentContainerCard title='Gerenciar Questionários'>
+        <Tab eventKey='questionarios' title='Questionarios'>
+          <ComponentContainerCard title='Gerenciar Questionarios'>
             <div className='d-flex justify-content-end mb-3'>
               <Link href={`/adm/vincular-questionarios/${programaId}`} className='btn btn-primary'>
                 <IconifyIcon icon='iconoir:link' className='me-1' />
-                Vincular Avançado
+                Vincular Avancado
               </Link>
             </div>
             <Row>
@@ -198,8 +238,8 @@ export default function EditarProgramaPage() {
                       className='d-flex justify-content-between align-items-center'
                     >
                       <div>
-                        <div className='fw-medium'>{q.codigo} - {q.nome}</div>
-                        <small className='text-muted'>{q.tipo}</small>
+                        <div className='fw-medium'>{(q as any).codigo || (q as any).titulo || (q as any).nome}</div>
+                        <small className='text-muted'>{(q as any).tipo || (q as any).categoria || '-'}</small>
                       </div>
                       {questionariosSelecionados.includes(q.id) && <IconifyIcon icon='iconoir:check' className='text-success' />}
                     </ListGroup.Item>
@@ -209,7 +249,7 @@ export default function EditarProgramaPage() {
               <Col md={6}>
                 <ListGroup style={{ maxHeight: '360px', overflowY: 'auto' }}>
                   {questionariosSelecionados.length === 0 && (
-                    <ListGroup.Item className='text-center text-muted py-4'>Nenhum questionário selecionado</ListGroup.Item>
+                    <ListGroup.Item className='text-center text-muted py-4'>Nenhum questionario selecionado</ListGroup.Item>
                   )}
                   {questionariosSelecionados.map((id, index) => {
                     const q = getQuestionarioById(id)
@@ -217,8 +257,8 @@ export default function EditarProgramaPage() {
                       <ListGroup.Item key={id} className='d-flex align-items-center'>
                         <Badge bg='secondary' className='me-2'>{index + 1}</Badge>
                         <div className='flex-grow-1'>
-                          <div className='fw-medium'>{q?.codigo} - {q?.nome}</div>
-                          <small className='text-muted'>{q?.tipo}</small>
+                          <div className='fw-medium'>{(q as any)?.codigo || (q as any)?.titulo || (q as any)?.nome}</div>
+                          <small className='text-muted'>{(q as any)?.tipo || (q as any)?.categoria || '-'}</small>
                         </div>
                         <div className='btn-group btn-group-sm'>
                           <Button variant='outline-secondary' onClick={() => moveUp(index)} disabled={index === 0}>
@@ -241,14 +281,14 @@ export default function EditarProgramaPage() {
         </Tab>
 
         <Tab eventKey='intervalos' title='Intervalos'>
-          <ComponentContainerCard title='Configuração de Intervalos'>
+          <ComponentContainerCard title='Configuracao de Intervalos'>
             <Table responsive className='mb-3'>
               <thead>
                 <tr>
                   <th>Nome</th>
                   <th>Dias</th>
                   <th>Cor</th>
-                  <th>Ações</th>
+                  <th>Acoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -285,7 +325,7 @@ export default function EditarProgramaPage() {
         <Link href='/adm/lista-programas' className='btn btn-secondary'>Voltar</Link>
         <Button variant='primary' onClick={handleSalvar} disabled={salvando}>
           <IconifyIcon icon='iconoir:check' className='me-1' />
-          Salvar Alterações
+          Salvar Alteracoes
         </Button>
       </div>
     </>

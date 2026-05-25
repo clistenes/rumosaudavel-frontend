@@ -1,6 +1,7 @@
 import type { NextAuthOptions, User } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import axios from 'axios'
+import https from 'https'
 import { UserType, ApiResponse } from '@/types/auth'
 import { EMPRESAS_DEMO, PARTICIPANTES_DEMO } from '@/assets/data/demo-data'
 
@@ -163,6 +164,8 @@ const demoUsers = [
 ]
 
 const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+const allowInsecureTls = process.env.NEXTAUTH_ALLOW_INSECURE_TLS === 'true'
+const insecureHttpsAgent = allowInsecureTls ? new https.Agent({ rejectUnauthorized: false }) : undefined
 
 // Log de debug das variáveis de ambiente (aparecerá no console do servidor)
 console.log('🔧 [NextAuth] Configuração:')
@@ -231,6 +234,7 @@ export const options: NextAuthOptions = {
               headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
               },
+              httpsAgent: insecureHttpsAgent,
             }
           )
 
@@ -303,6 +307,9 @@ export const options: NextAuthOptions = {
             console.error('❌ [NextAuth] Resposta da API:', error.response?.data)
             if (error.response?.status === 401 || error.response?.status === 403) {
               return null
+            }
+            if (error.code === 'CERT_HAS_EXPIRED') {
+              throw new Error('Certificado SSL da API expirado. Para ambiente local, defina NEXTAUTH_ALLOW_INSECURE_TLS=true no .env.local')
             }
             throw new Error(error.response?.data?.message || `Erro ${error.response?.status}: ${error.response?.statusText}`)
           }
@@ -420,3 +427,4 @@ export const options: NextAuthOptions = {
     maxAge: 24 * 60 * 60, // 24 hours
   },
 }
+

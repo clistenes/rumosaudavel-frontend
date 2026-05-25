@@ -20,7 +20,7 @@ export default function AdicionarProgramaPage() {
   const { mutateAsync: criarPrograma, loading: salvando } = useCriarPrograma()
 
   const [nome, setNome] = useState('')
-  const [descricao, setDescricao] = useState('')
+  const [introducao, setIntroducao] = useState('')
   const [questionariosSelecionados, setQuestionariosSelecionados] = useState<number[]>([])
 
   const questionariosDisponiveis = useMemo(() => {
@@ -57,7 +57,7 @@ export default function AdicionarProgramaPage() {
       if (demoMode) {
         addPrograma({
           nome,
-          descricao,
+          descricao: introducao,
           status: 'ativo',
           duracaoMeses: 12,
           dataInicio: new Date().toISOString().split('T')[0],
@@ -81,7 +81,9 @@ export default function AdicionarProgramaPage() {
       } else {
         await criarPrograma({
           nome,
-          descricao,
+          introducao,
+          questionarios: questionariosSelecionados,
+          ordenacao_questionarios: questionariosSelecionados.join(','),
         })
       }
 
@@ -118,8 +120,8 @@ export default function AdicionarProgramaPage() {
                   <Form.Control
                     as='textarea'
                     rows={3}
-                    value={descricao}
-                    onChange={(e) => setDescricao(e.target.value)}
+                    value={introducao}
+                    onChange={(e) => setIntroducao(e.target.value)}
                     placeholder='Descreva os objetivos do programa...'
                   />
                 </Col>

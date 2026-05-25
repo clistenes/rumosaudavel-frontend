@@ -32,6 +32,7 @@ export const API_ENDPOINTS = {
     get: (id: number) => `/empresas/${id}`,
     update: (id: number) => `/empresas/${id}`,
     delete: (id: number) => `/empresas/${id}`,
+    dashboard: (idEmpresa: number) => `/empresas/dashboard?id_empresa=${idEmpresa}`,
     campos: (id: number) => `/empresas/${id}/campos`,
     participantes: (id: number) => `/empresas/${id}/participantes`,
     logins: (id: number) => `/empresas/${id}/logins`,
@@ -59,11 +60,15 @@ export const API_ENDPOINTS = {
 
   programas: {
     list: '/programas',
+    listEmpresasVinculadas: '/programas/empresas',
+    vincular: '/programas/vincular',
+    definirIntervalo: '/programas/intervalo',
+    resetarIntervalo: (empresaId: number, programaId: number) => `/programas/intervalo/${empresaId}/${programaId}`,
     create: '/programas',
     get: (id: number) => `/programas/${id}`,
-    update: (id: number) => `/programas/${id}`,
+    update: '/programas',
     delete: (id: number) => `/programas/${id}`,
-    duplicar: (id: number) => `/programas/${id}/duplicar`,
+    duplicar: (id: number) => `/programas/duplicar/${id}`,
     vincularQuestionario: (id: number) => `/programas/${id}/questionarios`,
     desvincularQuestionario: (programaId: number, questionarioId: number) =>
       `/programas/${programaId}/questionarios/${questionarioId}`,

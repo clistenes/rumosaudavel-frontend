@@ -5,7 +5,7 @@
 
 import { API_CONFIG, API_ENDPOINTS } from './api.config'
 import { normalizeApiError, normalizeApiResponse } from './api-normalizer'
-import type { ApiResponse } from '@/types/api'
+import type { ApiDomainError, ApiResponse } from '@/types/api'
 
 const isDemoMode = () => API_CONFIG.isDemo
 
@@ -97,7 +97,10 @@ async function request<T>(
 
     return normalizeApiResponse<T>(payload)
   } catch (error) {
-    console.error('[API Request Failed]', endpoint, error)
+    const apiError = error as ApiDomainError
+    if (apiError?.status !== 404) {
+      console.error('[API Request Failed]', endpoint, error)
+    }
     throw error
   }
 }

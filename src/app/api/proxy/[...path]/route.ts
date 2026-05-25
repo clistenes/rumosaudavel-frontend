@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { options } from '@/app/api/auth/[...nextauth]/options'
 
 const JSON_CONTENT_TYPE = 'application/json'
+const allowInsecureTls = process.env.NEXTAUTH_ALLOW_INSECURE_TLS === 'true'
 
 const buildUpstreamUrl = (request: NextRequest) => {
   const url = new URL(request.url)
@@ -58,12 +59,28 @@ const proxy = async (request: NextRequest) => {
     const headers = buildHeaders(request, session.user.token)
     const body = await parseBody(request)
 
-    const response = await fetch(apiUrl, {
-      method: request.method,
-      headers,
-      body,
-      cache: 'no-store',
-    })
+    const previousTlsEnv = process.env.NODE_TLS_REJECT_UNAUTHORIZED
+    if (allowInsecureTls) {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+    }
+
+    let response: Response
+    try {
+      response = await fetch(apiUrl, {
+        method: request.method,
+        headers,
+        body,
+        cache: 'no-store',
+      })
+    } finally {
+      if (allowInsecureTls) {
+        if (previousTlsEnv === undefined) {
+          delete process.env.NODE_TLS_REJECT_UNAUTHORIZED
+        } else {
+          process.env.NODE_TLS_REJECT_UNAUTHORIZED = previousTlsEnv
+        }
+      }
+    }
 
     const contentType = response.headers.get('content-type') || ''
 
@@ -81,8 +98,12 @@ const proxy = async (request: NextRequest) => {
     return NextResponse.json(data, { status: response.status })
   } catch (error) {
     console.error('[Proxy] erro', error)
+    const message =
+      error instanceof Error && /certificate|CERT_/i.test(error.message)
+        ? 'Erro TLS no proxy (certificado da API). Defina NEXTAUTH_ALLOW_INSECURE_TLS=true no .env.local para desenvolvimento local.'
+        : 'Erro interno no proxy'
     return NextResponse.json(
-      { success: false, message: 'Erro interno no proxy' },
+      { success: false, message },
       { status: 500 }
     )
   }

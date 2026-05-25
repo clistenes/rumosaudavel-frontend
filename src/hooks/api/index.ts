@@ -6,6 +6,7 @@ export { useFetch, useMutation, usePaginatedFetch } from './useFetch'
 export {
   useEmpresas,
   useEmpresa,
+  useEmpresaDashboard,
   useCriarEmpresa,
   useAtualizarEmpresa,
   useRemoverEmpresa,

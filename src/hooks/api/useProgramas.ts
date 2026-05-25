@@ -8,8 +8,9 @@ import { useFetch, useMutation, usePaginatedFetch } from './useFetch'
 
 // Hook para listar programas
 export function useProgramas(params: ListarProgramasParams = {}) {
-  return usePaginatedFetch((page, perPage) => 
-    programaService.listar({ ...params, page, perPage })
+  return usePaginatedFetch(
+    (page, perPage) => programaService.listar({ ...params, page, perPage }),
+    params.perPage || 10
   )
 }
 
@@ -40,6 +41,16 @@ export function useAtualizarPrograma() {
 // Hook para remover programa
 export function useRemoverPrograma() {
   return useMutation((id: number) => programaService.remover(id))
+}
+
+export function useDuplicarPrograma() {
+  return useMutation((id: number) => programaService.duplicar(id))
+}
+
+export function useVincularEmpresaPrograma() {
+  return useMutation(({ programaId, empresaId }: { programaId: number; empresaId: number }) =>
+    programaService.vincularEmpresa(programaId, empresaId)
+  )
 }
 
 // Hook para listar questionários vinculados

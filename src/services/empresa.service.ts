@@ -23,6 +23,11 @@ export interface ListarEmpresasParams {
   ordem?: 'asc' | 'desc'
 }
 
+export interface EmpresaDashboardData {
+  usuarios: number
+  campanhas_ativas?: number
+}
+
 const isDemoMode = () => process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 const paginate = <T>(items: T[], page = 1, perPage = 10): PaginatedResponse<T> => {
@@ -153,6 +158,39 @@ export const empresaService = {
         message: 'Empresa nao encontrada',
       } as unknown as ApiResponse<Empresa>
     }
+  },
+
+  async dashboard(idEmpresa: number): Promise<ApiResponse<EmpresaDashboardData>> {
+    if (isDemoMode()) {
+      const state = demoDbService.getState()
+      const totalUsuarios = state.usuarios.filter((item) => Number(item.empresaId) === Number(idEmpresa)).length
+      const totalParticipantes = state.participantes.filter((item) => Number(item.empresaId) === Number(idEmpresa)).length
+
+      return success({
+        usuarios: totalUsuarios || totalParticipantes || 0,
+        campanhas_ativas: 0,
+      })
+    }
+
+    const response = await http.get<any>(API_ENDPOINTS.empresas.dashboard(idEmpresa))
+    const payload = (response as any)?.data ?? response
+    const nestedPayload = payload?.data ?? payload
+
+    const usuarios = Number(
+      nestedPayload?.usuarios ??
+      nestedPayload?.total_usuarios ??
+      nestedPayload?.users ??
+      0
+    ) || 0
+
+    const campanhasAtivasRaw =
+      nestedPayload?.campanhas_ativas ??
+      nestedPayload?.campanhasAtivas
+
+    return success({
+      usuarios,
+      ...(campanhasAtivasRaw !== undefined ? { campanhas_ativas: Number(campanhasAtivasRaw) || 0 } : {}),
+    })
   },
 
   async criar(data: CreateEmpresaParams): Promise<ApiResponse<Empresa>> {

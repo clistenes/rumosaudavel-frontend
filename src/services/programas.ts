@@ -15,7 +15,7 @@ export const programasService = {
   },
 
   async atualizar(id: number, data: { nome?: string; introducao?: string; questionarios?: number[]; ordenacao_questionarios?: string }) {
-    return http.put<unknown>(API_ENDPOINTS.programas.update(id), data) as Promise<ApiResponse<unknown>>
+    return http.put<unknown>(API_ENDPOINTS.programas.update, { id, ...data }) as Promise<ApiResponse<unknown>>
   },
 
   async deletar(id: number) {
