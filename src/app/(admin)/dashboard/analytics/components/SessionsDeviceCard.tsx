@@ -1,8 +1,9 @@
 'use client'
-import { ApexOptions } from 'apexcharts'
+import type { ApexOptions } from 'apexcharts'
 import React from 'react'
-import ReactApexChart from 'react-apexcharts'
+import dynamic from 'next/dynamic'
 import { Card, CardBody, CardHeader, CardTitle, Col, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Row, Table } from 'react-bootstrap'
+const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
 
 const SessionsDeviceCard = () => {
   const sessionsChartOpts: ApexOptions = {
